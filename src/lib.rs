@@ -17,8 +17,10 @@ mod structs;
 mod ndarray_structs;
 #[macro_use]
 mod macros;
+mod traits;
 
 pub use error::TableError;
+pub use traits::*;
 pub use structs::*;
 #[cfg(feature = "ndarray")]
 pub use ndarray_structs::*;

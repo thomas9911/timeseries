@@ -11,8 +11,8 @@ where
     U: Datelike + std::cmp::Ord,
     D: ndarray::Dimension
 {
-    headers: Vec<String>,
-    data: BTreeMap<U, ndarray::Array<V, <D as ndarray::Dimension>::Smaller>>,
+    pub headers: Vec<String>,
+    pub data: BTreeMap<U, ndarray::Array<V, <D as ndarray::Dimension>::Smaller>>,
 }
 
 impl<U, V, D> NdTable<U, V, D>
