@@ -2,6 +2,8 @@ use core::borrow::Borrow;
 use core::ops::RangeBounds;
 
 use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
+use crate::enums::IndexOrColumn;
+use crate::TableError;
 
 pub trait BtreeMapTrait<K: Ord, V> {
     fn clear(&mut self);
@@ -52,9 +54,20 @@ pub trait BtreeMapTrait<K: Ord, V> {
 }
 
 pub trait TableTrait<K: Ord, V, B: BtreeMapTrait<K, V>> {
-    fn range_object_owned<T: ?Sized, R>(&self, range: R) -> B
+    fn slice_owned<T: ?Sized, R>(&self, range: R) -> B
     where
         T: Ord,
         K: Borrow<T>,
         R: RangeBounds<T>;
+    fn slice_inplace<T: ?Sized, R>(&mut self, range: R)
+    where
+        T: Ord,
+        K: Borrow<T>,
+        R: RangeBounds<T>;
+    fn headers(&self) -> &[String];
+    fn swap_columns<X, Y>(&mut self, a: X, b: Y) -> Result<(), TableError>
+    where
+        X: Into<IndexOrColumn>,
+        Y: Into<IndexOrColumn>;
+    fn swap(&mut self, a: usize, b: usize) -> Result<(), TableError>;
 }

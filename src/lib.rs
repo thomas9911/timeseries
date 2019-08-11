@@ -11,15 +11,16 @@ extern crate ndarray;
 // pub fn s(t: &str) -> String {
 //     String::from(t)
 // }
-mod error;
+mod errors;
 mod structs;
 #[cfg(feature = "ndarray")]
 mod ndarray_structs;
 #[macro_use]
 mod macros;
 mod traits;
+pub mod enums;
 
-pub use error::TableError;
+pub use errors::TableError;
 pub use traits::*;
 pub use structs::*;
 #[cfg(feature = "ndarray")]

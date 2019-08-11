@@ -5,10 +5,12 @@ use std::collections::BTreeMap;
 // use crate::traits::{BtreeMapTrait, BtreeMapViews};
 use crate::traits::{BtreeMapTrait, TableTrait};
 use crate::TableError;
+use crate::enums::IndexOrColumn;
+
 use chrono::Datelike;
 use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Table<U, V>
 where
     U: Datelike + std::cmp::Ord,
@@ -155,7 +157,7 @@ where
     U: Datelike + std::cmp::Ord + Clone,
     V: Clone,
 {
-    fn range_object_owned<T: ?Sized, R>(&self, range: R) -> Table<U, V>
+    fn slice_owned<T: ?Sized, R>(&self, range: R) -> Table<U, V>
     where
         T: Ord,
         U: Borrow<T>,
@@ -167,6 +169,72 @@ where
         }
         Table::new_btreemap(self.headers.to_owned(), t2)
     }
+    fn slice_inplace<T: ?Sized, R>(&mut self, range: R)
+    where
+        T: Ord,
+        U: Borrow<T>,
+        R: RangeBounds<T>,
+    {
+        self.data = self
+            .range(range)
+            .map(|(k, v)| (k.to_owned(), v.to_vec()))
+            .collect();
+    }
+
+    fn headers(&self) -> &[String] {
+        self.headers.as_ref()
+    }
+
+    /// takes a string or usize and swaps the columns
+    fn swap_columns<X: Into<IndexOrColumn>, Y: Into<IndexOrColumn>>(&mut self, a: X, b: Y) -> Result<(), TableError> {
+        let enum_a = a.into();
+        let enum_b = b.into();
+
+        let index_a = match enum_a {
+            IndexOrColumn::Column(owned_a) => {
+                match self.headers().iter().position(|x| x == &owned_a) {
+                    Some(x) => x,
+                    None => return Err(TableError::new("column a not found")),
+                }
+            }
+            IndexOrColumn::Index(x) => x,
+        };
+
+        let index_b = match enum_b {
+            IndexOrColumn::Column(owned_b) => {
+                match self.headers().iter().position(|x| x == &owned_b) {
+                    Some(x) => x,
+                    None => return Err(TableError::new("column b not found")),
+                }
+            }
+            IndexOrColumn::Index(x) => x,
+        };
+
+        self.swap(index_a, index_b)?;
+        Ok(())
+    }
+
+    fn swap(&mut self, a: usize, b: usize) -> Result<(), TableError> {
+        let h_len = self.headers().len() - 1;
+        if a > h_len {
+            return Err(TableError::new("index number a is too high"));
+        }
+        if b > h_len {
+            return Err(TableError::new("index number b is too high"));
+        }
+
+        for _ in self.data.values_mut().map(|x| x.swap(a, b)) {}
+        self.headers.swap(a, b);
+        Ok(())
+    }
+}
+
+impl<U, V> Table<U, V>
+where
+    U: Datelike + std::cmp::Ord + Clone,
+    V: Clone,
+{
+
 }
 
 #[cfg(test)]
@@ -191,7 +259,7 @@ mod array_test {
         Table::new(headers, times, d).unwrap()
     }
 
-    fn new_table_large<'a>() -> Table<chrono::DateTime<chrono::FixedOffset>, &'a str> {
+    fn new_table_long<'a>() -> Table<chrono::DateTime<chrono::FixedOffset>, &'a str> {
         let headers = vec![s!("number"), s!("text")];
 
         let times = vec![
@@ -223,6 +291,29 @@ mod array_test {
             ["11", "Test11"],
             ["12", "Test12"],
             ["13", "Test13"],
+        ];
+
+        Table::new(headers, times, d).unwrap()
+    }
+
+    fn new_table_large<'a>() -> Table<chrono::DateTime<chrono::FixedOffset>, &'a str> {
+        let headers = vec![s!("number"), s!("text"), s!("test"), s!("data")];
+
+        let times = vec![
+            dtu!("2019-01-01T12:00:00Z"),
+            dtu!("2019-01-02T12:00:00Z"),
+            dtu!("2019-01-03T12:00:00Z"),
+            dtu!("2019-01-04T12:00:00Z"),
+            dtu!("2019-01-05T12:00:00Z"),
+            dtu!("2019-01-06T12:00:00Z"),
+        ];
+        let d = vec2![
+            ["1", "Test01", "test", "abcd"],
+            ["2", "Test02", "test", "efgh"],
+            ["3", "Test03", "test", "ijkl"],
+            ["4", "Test04", "test", "mnop"],
+            ["5", "Test05", "test", "qrst"],
+            ["6", "Test06", "test", "uvwx"],
         ];
 
         Table::new(headers, times, d).unwrap()
@@ -294,7 +385,7 @@ mod array_test {
     #[test]
     fn table_btree_trait_range() {
         use crate::BtreeMapTrait;
-        let t1 = new_table_large();
+        let t1 = new_table_long();
 
         let mut t2 = BTreeMap::new();
         for (k, v) in t1.range(dtu!("2019-01-03T12:00:00Z")..dtu!("2019-01-05T12:00:00Z")) {
@@ -312,11 +403,11 @@ mod array_test {
     }
 
     #[test]
-    fn table_btree_trait_range_object_owned() {
+    fn table_btree_trait_slice_owned() {
         use crate::TableTrait;
-        let t1 = new_table_large();
+        let t1 = new_table_long();
 
-        let t2 = t1.range_object_owned(dtu!("2019-01-03T12:00:00Z")..dtu!("2019-01-05T12:00:00Z"));
+        let t2 = t1.slice_owned(dtu!("2019-01-03T12:00:00Z")..dtu!("2019-01-05T12:00:00Z"));
 
         let expected = Table::new(
             vec![s!("number"), s!("text")],
@@ -326,5 +417,48 @@ mod array_test {
         .unwrap();
 
         assert_eq!(t2, expected);
+    }
+
+    #[test]
+    fn table_btree_trait_slice_inplace() {
+        use crate::TableTrait;
+        let mut t1 = new_table_long();
+
+        t1.slice_inplace(dtu!("2019-01-03T12:00:00Z")..dtu!("2019-01-05T12:00:00Z"));
+
+        let expected = Table::new(
+            vec![s!("number"), s!("text")],
+            vec![dtu!("2019-01-03T12:00:00Z"), dtu!("2019-01-04T12:00:00Z")],
+            vec2![["3", "Test03"], ["4", "Test04"]],
+        )
+        .unwrap();
+
+        assert_eq!(t1, expected);
+    }
+
+    #[test]
+    fn table_btree_trait_headers() {
+        use crate::TableTrait;
+        let t1 = new_table_long();
+
+        let expected = [s!("number"), s!("text")];
+
+        assert_eq!(t1.headers(), &expected);
+    }
+
+    #[test]
+    fn table_btree_trait_change_column() {
+        use crate::{TableTrait, BtreeMapTrait};
+        let mut t1 = new_table_large();
+        let t1_copy = t1.clone();
+
+        assert_eq!(t1.headers(), &[s!("number"), s!("text"), s!("test"), s!("data")]);
+        assert_eq!(t1.values().last(), Some(&vec!["6", "Test06", "test", "uvwx"]));
+
+        t1.swap_columns("test", 3).unwrap();
+
+        assert_eq!(t1.headers(), &[s!("number"), s!("text"), s!("data"), s!("test")]);
+        assert_eq!(t1.values().last(), Some(&vec!["6", "Test06", "uvwx", "test"]));
+        assert_ne!(t1, t1_copy);
     }
 }
