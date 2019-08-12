@@ -1,10 +1,12 @@
 use core::borrow::Borrow;
 use core::ops::RangeBounds;
+use std::collections::HashMap;
 
 use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
 use crate::enums::IndexOrColumn;
 use crate::TableError;
 
+/// Trait that passes the methods from the [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html).
 pub trait BtreeMapTrait<K: Ord, V> {
     fn clear(&mut self);
     fn get<Q: ?Sized>(&self, key: &Q) -> Option<&V>
@@ -70,4 +72,10 @@ pub trait TableTrait<K: Ord, V, B: BtreeMapTrait<K, V>> {
         X: Into<IndexOrColumn>,
         Y: Into<IndexOrColumn>;
     fn swap(&mut self, a: usize, b: usize) -> Result<(), TableError>;
+}
+
+pub trait TableMetaTrait<M, N> {
+    fn set_meta_data(&mut self, meta_data: HashMap<M, N>);
+    fn set_meta_key(&mut self, key: M, value: N);
+    fn get_meta_key(&mut self, key: &M) -> Option<&N>;
 }

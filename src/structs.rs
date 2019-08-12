@@ -1,13 +1,38 @@
 use core::borrow::Borrow;
 use core::ops::RangeBounds;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::enums::IndexOrColumn;
-use crate::traits::{BtreeMapTrait, TableTrait};
+use crate::traits::{BtreeMapTrait, TableTrait, TableMetaTrait};
 use crate::TableError;
 
 use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
 
+///
+///
+///```
+/// use timeseries::{vec2, Table};
+///
+/// let headers = vec![
+///     String::from("number"),
+///     String::from("text"),
+///     String::from("test"),
+///     String::from("data")
+/// ];
+///
+/// let indexes = vec![1, 2, 3, 4, 5, 6];
+/// let data = vec2![
+///     ["1", "Test01", "test", "abcd"],
+///     ["2", "Test02", "test", "efgh"],
+///     ["3", "Test03", "test", "ijkl"],
+///     ["4", "Test04", "test", "mnop"],
+///     ["5", "Test05", "test", "qrst"],
+///     ["6", "Test06", "test", "uvwx"],
+/// ];
+///
+///  Table::new(headers, indexes, data).unwrap();
+///```
+///
 #[derive(Debug, PartialEq, Clone)]
 pub struct Table<U, V>
 where
@@ -15,6 +40,7 @@ where
 {
     pub headers: Vec<String>,
     pub data: BTreeMap<U, Vec<V>>,
+    pub meta_data: Option<HashMap<String, String>>
 }
 
 impl<U, V> Table<U, V>
@@ -22,7 +48,7 @@ where
     U: std::cmp::Ord,
 {
     pub fn new_btreemap(headers: Vec<String>, data: BTreeMap<U, Vec<V>>) -> Table<U, V> {
-        Table { headers, data }
+        Table { headers, data, meta_data: None }
     }
 
     pub fn new(
@@ -51,6 +77,37 @@ where
             tree_data.insert(k, v);
         }
         Ok(tree_data)
+    }
+}
+
+impl<U, V> TableMetaTrait<String, String> for Table<U, V>
+where
+    U: std::cmp::Ord,
+{
+    fn set_meta_data(&mut self, meta_data: HashMap<String, String>){
+        self.meta_data = Some(meta_data);
+    }
+
+    /// add arbitrary data to table
+    fn set_meta_key(&mut self, key: String, value: String){
+        self.meta_data = match self.meta_data{
+            Some(ref mut x) => {
+                x.insert(key, value);
+                return;
+            },
+            None => {
+               Some(HashMap::new())
+            }
+        };
+        self.set_meta_key(key, value)
+    }
+
+    /// get arbitrary data from table
+    fn get_meta_key(&mut self, key: &String) -> Option<&String>{
+        match self.meta_data{
+            None => None,
+            Some(ref x) => x.get(key)
+        }
     }
 }
 
@@ -448,4 +505,20 @@ mod array_test {
         );
         assert_ne!(t1, t1_copy);
     }
+
+    #[test]
+    fn meta_data(){
+        use crate::TableMetaTrait;
+
+        let mut t1 = new_table_large();
+        assert_eq!(None, t1.get_meta_key(&s!("total")));
+
+        t1.set_meta_key(s!("total"), s!("1500"));
+        t1.set_meta_key(s!("size"), s!("123kb"));
+
+        assert_eq!(Some(&s!("1500")), t1.get_meta_key(&s!("total")));
+        assert_eq!(Some(&s!("123kb")), t1.get_meta_key(&s!("size")));
+        assert_eq!(None, t1.get_meta_key(&s!("some_other_thing")));
+    }
+
 }
