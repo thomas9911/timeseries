@@ -57,6 +57,7 @@ where
         data: Vec<Vec<V>>,
     ) -> Result<Table<U, V>, TableError> {
         let data = Self::to_btreemap(indexes, data)?;
+        Self::check_headers(&data, &headers)?;
         Ok(Table::new_btreemap(headers, data))
     }
 
@@ -77,6 +78,18 @@ where
             tree_data.insert(k, v);
         }
         Ok(tree_data)
+    }
+
+    fn check_headers(data: &BTreeMap<U, Vec<V>>, headers: &Vec<String>) -> Result<(), TableError>{
+        let len = match data.values().next() {
+            Some(x) => x.len(),
+            None => return Err(TableError::new("data is empty")),
+        };
+
+        if headers.len() != len{
+            return Err(TableError::new("header has too many columns"))
+        };
+        Ok(())
     }
 }
 

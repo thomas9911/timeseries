@@ -17,3 +17,4 @@ optional = true
 
 [dev-dependencies]
 chrono = "*"
+csv = "*"
