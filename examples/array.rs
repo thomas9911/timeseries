@@ -1,6 +1,20 @@
 use std::collections::BTreeMap;
-use timeseries::chrono::{DateTime, FixedOffset, };
-use timeseries::{Table, vec2, s, dt};
+use chrono::{DateTime, FixedOffset, };
+use timeseries::{Table, vec2};
+
+macro_rules! s {
+    ($t:expr) => {
+        String::from($t)
+    };
+}
+
+macro_rules! dt {
+    ($t:expr) => {
+        chrono::DateTime::parse_from_rfc3339($t)
+    };
+}
+
+
 
 fn main() {
     let now: DateTime<FixedOffset> = chrono::Utc::now().into();

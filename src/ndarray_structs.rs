@@ -8,7 +8,7 @@ use chrono::Datelike;
 #[derive(Debug, PartialEq)]
 pub struct NdTable<U, V, D>
 where
-    U: Datelike + std::cmp::Ord,
+    U: std::cmp::Ord,
     D: ndarray::Dimension
 {
     pub headers: Vec<String>,
@@ -17,7 +17,7 @@ where
 
 impl<U, V, D> NdTable<U, V, D>
 where
-    U: Datelike + std::cmp::Ord,
+    U: std::cmp::Ord,
     D: ndarray::Dimension + ndarray::RemoveAxis,
     V: Clone
 {
@@ -58,20 +58,24 @@ where
 
 
 
-#[cfg(all(test, feature = "ndarray"))]
+#[cfg(test)]
 mod ndarray_test{
     use crate::NdTable;
-    use crate::{s, dt};
+
+    macro_rules! s {
+        ($t:expr) => {
+            String::from($t)
+        };
+    }
 
     #[test]
     fn ndarray_table(){
-        let now: chrono::DateTime<chrono::FixedOffset> = chrono::Utc::now().into();
         let headers = vec![s!("h1"), s!("h2")];
 
-        let times = vec![dt!("2019-01-01T12:00:00Z").unwrap(), now.clone(), dt!("2019-01-05T12:00:00Z").unwrap()];
+        let indexes = vec![12,15,21];
         let d = ndarray::array![["Hark", "Bark"], ["Hans", "kaas"], ["Hans", "kaas"]];
 
-        let t1 = NdTable::new(headers, times, d);
+        let t1 = NdTable::new(headers, indexes, d);
         assert!(t1.is_ok());
     }
 }

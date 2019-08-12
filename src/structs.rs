@@ -2,18 +2,16 @@ use core::borrow::Borrow;
 use core::ops::RangeBounds;
 use std::collections::BTreeMap;
 
-// use crate::traits::{BtreeMapTrait, BtreeMapViews};
+use crate::enums::IndexOrColumn;
 use crate::traits::{BtreeMapTrait, TableTrait};
 use crate::TableError;
-use crate::enums::IndexOrColumn;
 
-use chrono::Datelike;
 use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Table<U, V>
 where
-    U: Datelike + std::cmp::Ord,
+    U: std::cmp::Ord,
 {
     pub headers: Vec<String>,
     pub data: BTreeMap<U, Vec<V>>,
@@ -21,7 +19,7 @@ where
 
 impl<U, V> Table<U, V>
 where
-    U: Datelike + std::cmp::Ord,
+    U: std::cmp::Ord,
 {
     pub fn new_btreemap(headers: Vec<String>, data: BTreeMap<U, Vec<V>>) -> Table<U, V> {
         Table { headers, data }
@@ -29,27 +27,24 @@ where
 
     pub fn new(
         headers: Vec<String>,
-        time_data: Vec<U>,
+        indexes: Vec<U>,
         data: Vec<Vec<V>>,
     ) -> Result<Table<U, V>, TableError> {
-        let data = Self::to_btreemap(time_data, data)?;
+        let data = Self::to_btreemap(indexes, data)?;
         Ok(Table::new_btreemap(headers, data))
     }
 
-    fn to_btreemap(
-        time_data: Vec<U>,
-        data: Vec<Vec<V>>,
-    ) -> Result<BTreeMap<U, Vec<V>>, TableError> {
+    fn to_btreemap(indexes: Vec<U>, data: Vec<Vec<V>>) -> Result<BTreeMap<U, Vec<V>>, TableError> {
         let len = match data.get(0) {
             Some(x) => x.len(),
             None => return Err(TableError::new("data is empty")),
         };
         let mut tree_data: BTreeMap<U, Vec<V>> = BTreeMap::new();
-        if data.len() != time_data.len() {
+        if data.len() != indexes.len() {
             return Err(TableError::new("time and data length should be equal"));
         }
 
-        for (k, v) in time_data.into_iter().zip(data.into_iter()) {
+        for (k, v) in indexes.into_iter().zip(data.into_iter()) {
             if v.len() != len {
                 return Err(TableError::new("all rows should have equal length"));
             }
@@ -61,7 +56,7 @@ where
 
 impl<U, V> BtreeMapTrait<U, Vec<V>> for Table<U, V>
 where
-    U: Datelike + std::cmp::Ord,
+    U: std::cmp::Ord,
 {
     fn clear(&mut self) {
         self.data.clear()
@@ -154,7 +149,7 @@ where
 }
 impl<U, V> TableTrait<U, Vec<V>, Table<U, V>> for Table<U, V>
 where
-    U: Datelike + std::cmp::Ord + Clone,
+    U: std::cmp::Ord + Clone,
     V: Clone,
 {
     fn slice_owned<T: ?Sized, R>(&self, range: R) -> Table<U, V>
@@ -186,7 +181,11 @@ where
     }
 
     /// takes a string or usize and swaps the columns
-    fn swap_columns<X: Into<IndexOrColumn>, Y: Into<IndexOrColumn>>(&mut self, a: X, b: Y) -> Result<(), TableError> {
+    fn swap_columns<X: Into<IndexOrColumn>, Y: Into<IndexOrColumn>>(
+        &mut self,
+        a: X,
+        b: Y,
+    ) -> Result<(), TableError> {
         let enum_a = a.into();
         let enum_b = b.into();
 
@@ -231,52 +230,36 @@ where
 
 impl<U, V> Table<U, V>
 where
-    U: Datelike + std::cmp::Ord + Clone,
+    U: std::cmp::Ord + Clone,
     V: Clone,
 {
-
 }
 
 #[cfg(test)]
 mod array_test {
+    use crate::vec2;
     use crate::Table;
-    use crate::{s, vec2};
     use std::collections::BTreeMap;
 
-    macro_rules! dtu {
+    macro_rules! s {
         ($t:expr) => {
-            chrono::DateTime::parse_from_rfc3339($t).unwrap()
+            String::from($t)
         };
     }
 
-    fn new_table<'a>() -> Table<chrono::DateTime<chrono::FixedOffset>, &'a str> {
-        let now: chrono::DateTime<chrono::FixedOffset> = chrono::Utc::now().into();
+    fn new_table<'a>() -> Table<u8, &'a str> {
         let headers = vec![s!("h1"), s!("h2")];
 
-        let times = vec![dtu!("2019-01-01T12:00:00Z"), now];
+        let indexes = vec![1, 2];
         let d = vec2![["Hark", "Bark"], ["Hans", "kaas"]];
 
-        Table::new(headers, times, d).unwrap()
+        Table::new(headers, indexes, d).unwrap()
     }
 
-    fn new_table_long<'a>() -> Table<chrono::DateTime<chrono::FixedOffset>, &'a str> {
+    fn new_table_long<'a>() -> Table<u8, &'a str> {
         let headers = vec![s!("number"), s!("text")];
 
-        let times = vec![
-            dtu!("2019-01-01T12:00:00Z"),
-            dtu!("2019-01-02T12:00:00Z"),
-            dtu!("2019-01-03T12:00:00Z"),
-            dtu!("2019-01-04T12:00:00Z"),
-            dtu!("2019-01-05T12:00:00Z"),
-            dtu!("2019-01-06T12:00:00Z"),
-            dtu!("2019-01-07T12:00:00Z"),
-            dtu!("2019-01-08T12:00:00Z"),
-            dtu!("2019-01-09T12:00:00Z"),
-            dtu!("2019-01-10T12:00:00Z"),
-            dtu!("2019-01-11T12:00:00Z"),
-            dtu!("2019-01-12T12:00:00Z"),
-            dtu!("2019-01-13T12:00:00Z"),
-        ];
+        let indexes = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
         let d = vec2![
             ["1", "Test01"],
             ["2", "Test02"],
@@ -293,20 +276,13 @@ mod array_test {
             ["13", "Test13"],
         ];
 
-        Table::new(headers, times, d).unwrap()
+        Table::new(headers, indexes, d).unwrap()
     }
 
-    fn new_table_large<'a>() -> Table<chrono::DateTime<chrono::FixedOffset>, &'a str> {
+    fn new_table_large<'a>() -> Table<u8, &'a str> {
         let headers = vec![s!("number"), s!("text"), s!("test"), s!("data")];
 
-        let times = vec![
-            dtu!("2019-01-01T12:00:00Z"),
-            dtu!("2019-01-02T12:00:00Z"),
-            dtu!("2019-01-03T12:00:00Z"),
-            dtu!("2019-01-04T12:00:00Z"),
-            dtu!("2019-01-05T12:00:00Z"),
-            dtu!("2019-01-06T12:00:00Z"),
-        ];
+        let indexes = vec![1, 2, 3, 4, 5, 6];
         let d = vec2![
             ["1", "Test01", "test", "abcd"],
             ["2", "Test02", "test", "efgh"],
@@ -316,22 +292,21 @@ mod array_test {
             ["6", "Test06", "test", "uvwx"],
         ];
 
-        Table::new(headers, times, d).unwrap()
+        Table::new(headers, indexes, d).unwrap()
     }
 
     #[test]
     fn table_is_same_with_btreemap() {
-        let now: chrono::DateTime<chrono::FixedOffset> = chrono::Utc::now().into();
         let headers = vec![s!("h1"), s!("h2")];
 
-        let times = vec![dtu!("2019-01-01T12:00:00Z"), now.clone()];
+        let indexes = vec![1, 2];
         let d = vec2![["Hark", "Bark"], ["Hans", "kaas"]];
 
-        let t1 = Table::new(headers.clone(), times, d).unwrap();
+        let t1 = Table::new(headers.clone(), indexes, d).unwrap();
 
         let mut d = BTreeMap::new();
-        d.insert(dtu!("2019-01-01T12:00:00Z"), vec!["Hark", "Bark"]);
-        d.insert(now, vec!["Hans", "kaas"]);
+        d.insert(1, vec!["Hark", "Bark"]);
+        d.insert(2, vec!["Hans", "kaas"]);
 
         let t2 = Table::new_btreemap(headers, d);
 
@@ -343,7 +318,7 @@ mod array_test {
         use crate::BtreeMapTrait;
 
         let t1 = new_table();
-        let date = dtu!("2019-01-01T12:00:00Z");
+        let date = 1;
         let mut i1 = t1.iter();
         assert_eq!(Some((&date, &vec!["Hark", "Bark"])), i1.next());
     }
@@ -353,7 +328,7 @@ mod array_test {
         use crate::BtreeMapTrait;
 
         let t1 = new_table();
-        let date = dtu!("2019-01-01T12:00:00Z");
+        let date = 1;
         let i1 = t1.get(&date);
         assert_eq!(Some(&vec!["Hark", "Bark"]), i1);
     }
@@ -363,7 +338,7 @@ mod array_test {
         use crate::BtreeMapTrait;
 
         let mut t1 = new_table();
-        let date = dtu!("2019-01-01T12:00:00Z");
+        let date = 1;
         let i1 = t1.get_mut(&date).unwrap();
 
         i1[0] = "Test";
@@ -388,13 +363,13 @@ mod array_test {
         let t1 = new_table_long();
 
         let mut t2 = BTreeMap::new();
-        for (k, v) in t1.range(dtu!("2019-01-03T12:00:00Z")..dtu!("2019-01-05T12:00:00Z")) {
+        for (k, v) in t1.range(3..5) {
             t2.insert(*k, v.clone());
         }
 
         let expected = Table::new(
             vec![s!("number"), s!("text")],
-            vec![dtu!("2019-01-03T12:00:00Z"), dtu!("2019-01-04T12:00:00Z")],
+            vec![3, 4],
             vec2![["3", "Test03"], ["4", "Test04"]],
         )
         .unwrap();
@@ -407,11 +382,11 @@ mod array_test {
         use crate::TableTrait;
         let t1 = new_table_long();
 
-        let t2 = t1.slice_owned(dtu!("2019-01-03T12:00:00Z")..dtu!("2019-01-05T12:00:00Z"));
+        let t2 = t1.slice_owned(3..5);
 
         let expected = Table::new(
             vec![s!("number"), s!("text")],
-            vec![dtu!("2019-01-03T12:00:00Z"), dtu!("2019-01-04T12:00:00Z")],
+            vec![3, 4],
             vec2![["3", "Test03"], ["4", "Test04"]],
         )
         .unwrap();
@@ -424,11 +399,11 @@ mod array_test {
         use crate::TableTrait;
         let mut t1 = new_table_long();
 
-        t1.slice_inplace(dtu!("2019-01-03T12:00:00Z")..dtu!("2019-01-05T12:00:00Z"));
+        t1.slice_inplace(3..5);
 
         let expected = Table::new(
             vec![s!("number"), s!("text")],
-            vec![dtu!("2019-01-03T12:00:00Z"), dtu!("2019-01-04T12:00:00Z")],
+            vec![3, 4],
             vec2![["3", "Test03"], ["4", "Test04"]],
         )
         .unwrap();
@@ -448,17 +423,29 @@ mod array_test {
 
     #[test]
     fn table_btree_trait_change_column() {
-        use crate::{TableTrait, BtreeMapTrait};
+        use crate::{BtreeMapTrait, TableTrait};
         let mut t1 = new_table_large();
         let t1_copy = t1.clone();
 
-        assert_eq!(t1.headers(), &[s!("number"), s!("text"), s!("test"), s!("data")]);
-        assert_eq!(t1.values().last(), Some(&vec!["6", "Test06", "test", "uvwx"]));
+        assert_eq!(
+            t1.headers(),
+            &[s!("number"), s!("text"), s!("test"), s!("data")]
+        );
+        assert_eq!(
+            t1.values().last(),
+            Some(&vec!["6", "Test06", "test", "uvwx"])
+        );
 
         t1.swap_columns("test", 3).unwrap();
 
-        assert_eq!(t1.headers(), &[s!("number"), s!("text"), s!("data"), s!("test")]);
-        assert_eq!(t1.values().last(), Some(&vec!["6", "Test06", "uvwx", "test"]));
+        assert_eq!(
+            t1.headers(),
+            &[s!("number"), s!("text"), s!("data"), s!("test")]
+        );
+        assert_eq!(
+            t1.values().last(),
+            Some(&vec!["6", "Test06", "uvwx", "test"])
+        );
         assert_ne!(t1, t1_copy);
     }
 }

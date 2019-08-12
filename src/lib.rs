@@ -1,3 +1,4 @@
+#[cfg(feature = "chrono")]
 pub extern crate chrono;
 
 #[cfg(feature = "ndarray")]
@@ -15,6 +16,8 @@ mod errors;
 mod structs;
 #[cfg(feature = "ndarray")]
 mod ndarray_structs;
+#[cfg(feature = "chrono")]
+mod chrono_structs;
 #[macro_use]
 mod macros;
 mod traits;
@@ -23,5 +26,7 @@ pub mod enums;
 pub use errors::TableError;
 pub use traits::*;
 pub use structs::*;
+#[cfg(feature = "chrono")]
+pub use chrono_structs::*;
 #[cfg(feature = "ndarray")]
 pub use ndarray_structs::*;

@@ -7,8 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = "*"
 
+[dependencies.chrono]
+version = "*"
+optional = true
 [dependencies.ndarray]
 version = "*"
 optional = true
+
+[dev-dependencies]
+chrono = "*"
