@@ -2,9 +2,9 @@ use core::borrow::Borrow;
 use core::ops::RangeBounds;
 use std::collections::HashMap;
 
-use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
 use crate::enums::IndexOrColumn;
 use crate::TableError;
+use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
 
 /// Trait that passes the methods from the [BTreeMap](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html).
 pub trait BtreeMapTrait<K: Ord, V> {

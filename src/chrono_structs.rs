@@ -10,7 +10,7 @@ where
     U: Datelike + std::cmp::Ord + Clone,
     V: Clone,
 {
-    pub fn cheese(){}
+    pub fn cheese() {}
 }
 
 #[cfg(test)]

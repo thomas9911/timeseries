@@ -50,7 +50,8 @@ fn main() {
         .from_reader(TSV_DATA.as_bytes());
     let t = read_csv_to_datetable(&mut rdr, |x| -> Result<_, ParseError> {
         Ok(NaiveDateTime::parse_from_str(x, "%F %H:%M:%S%.3f")?)
-    }).unwrap();
+    })
+    .unwrap();
 
     assert_eq!(y, t);
     println!("{:#?}", t);

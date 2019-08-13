@@ -1,4 +1,3 @@
-
 /// macro that creates a Vec<Vec<V>> from an array of arrays with elements V
 /// ```
 /// use timeseries::vec2;

@@ -579,8 +579,8 @@ mod array_test {
 
     #[test]
     fn table_rows() {
-        use std::collections::HashMap;
         use crate::map;
+        use std::collections::HashMap;
 
         let mut t1 = new_table_large();
 

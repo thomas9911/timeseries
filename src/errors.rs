@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct TableError {
     description: String,
@@ -17,7 +16,6 @@ impl std::fmt::Display for TableError {
         write!(f, "{}", self.description)
     }
 }
-
 
 #[derive(Debug)]
 pub struct TableReadError(String);

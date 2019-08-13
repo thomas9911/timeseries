@@ -15,23 +15,23 @@ pub extern crate csv;
 // pub fn s(t: &str) -> String {
 //     String::from(t)
 // }
-mod errors;
-mod structs;
-#[cfg(feature = "ndarray")]
-mod ndarray_structs;
 #[cfg(feature = "chrono")]
 mod chrono_structs;
+mod errors;
+#[cfg(feature = "ndarray")]
+mod ndarray_structs;
+mod structs;
 #[macro_use]
 mod macros;
+pub mod enums;
 mod traits;
 mod utils;
-pub mod enums;
 
-pub use errors::*;
-pub use traits::*;
-pub use structs::*;
 #[cfg(feature = "chrono")]
 pub use chrono_structs::*;
+pub use errors::*;
 #[cfg(feature = "ndarray")]
 pub use ndarray_structs::*;
+pub use structs::*;
+pub use traits::*;
 pub use utils::*;

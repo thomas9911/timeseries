@@ -5,7 +5,7 @@ extern crate csv;
 extern crate chrono;
 
 #[cfg(all(feature = "chrono", feature = "csv"))]
-use crate::{Table, TableReadError, TableMetaTrait};
+use crate::{Table, TableMetaTrait, TableReadError};
 
 #[cfg(all(feature = "chrono", feature = "csv"))]
 pub fn read_csv_to_datetable<R, U, F, Y>(
