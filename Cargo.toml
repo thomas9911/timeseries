@@ -14,7 +14,14 @@ optional = true
 [dependencies.ndarray]
 version = "*"
 optional = true
+[dependencies.csv]
+version = "*"
+optional = true
 
 [dev-dependencies]
 chrono = "*"
 csv = "*"
+
+[[example]]
+name = "data"
+required-features = ["csv", "chrono"]

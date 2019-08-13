@@ -2,7 +2,10 @@
 pub extern crate chrono;
 
 #[cfg(feature = "ndarray")]
-extern crate ndarray;
+pub extern crate ndarray;
+
+#[cfg(feature = "csv")]
+pub extern crate csv;
 
 // use chrono::DateTime;
 
@@ -21,12 +24,14 @@ mod chrono_structs;
 #[macro_use]
 mod macros;
 mod traits;
+mod utils;
 pub mod enums;
 
-pub use errors::TableError;
+pub use errors::*;
 pub use traits::*;
 pub use structs::*;
 #[cfg(feature = "chrono")]
 pub use chrono_structs::*;
 #[cfg(feature = "ndarray")]
 pub use ndarray_structs::*;
+pub use utils::*;

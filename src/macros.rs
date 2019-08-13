@@ -1,3 +1,4 @@
+
 /// macro that creates a Vec<Vec<V>> from an array of arrays with elements V
 /// ```
 /// use timeseries::vec2;
@@ -29,6 +30,41 @@ macro_rules! vec2 {
             let mut v = Vec::new();
             $(
                 v.push($t.to_vec());
+            )*
+            v
+        }
+    };
+}
+
+///
+/// ```
+/// use timeseries::map;
+/// use std::collections::HashMap;
+///
+/// let mut expected = HashMap::new();
+/// expected.insert("test", "123");
+/// expected.insert("test2", "456");
+///
+/// let t = map!{
+///     "test" => "123",
+///     "test2" => "456"
+/// };
+///
+/// assert_eq!(expected, t);
+/// ```
+#[macro_export]
+macro_rules! map {
+    {$
+        (
+            $t:expr => $s:expr
+        ),+ $(,)*
+    } => {
+        {
+            use std::collections::HashMap;
+
+            let mut v = HashMap::new();
+            $(
+                v.insert($t, $s);
             )*
             v
         }

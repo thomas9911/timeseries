@@ -3,7 +3,7 @@ use core::ops::RangeBounds;
 use std::collections::{BTreeMap, HashMap};
 
 use crate::enums::IndexOrColumn;
-use crate::traits::{BtreeMapTrait, TableTrait, TableMetaTrait};
+use crate::traits::{BtreeMapTrait, TableMetaTrait, TableTrait};
 use crate::TableError;
 
 use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
@@ -40,7 +40,7 @@ where
 {
     pub headers: Vec<String>,
     pub data: BTreeMap<U, Vec<V>>,
-    pub meta_data: Option<HashMap<String, String>>
+    pub meta_data: Option<HashMap<String, String>>,
 }
 
 impl<U, V> Table<U, V>
@@ -48,7 +48,11 @@ where
     U: std::cmp::Ord,
 {
     pub fn new_btreemap(headers: Vec<String>, data: BTreeMap<U, Vec<V>>) -> Table<U, V> {
-        Table { headers, data, meta_data: None }
+        Table {
+            headers,
+            data,
+            meta_data: None,
+        }
     }
 
     pub fn new(
@@ -80,16 +84,57 @@ where
         Ok(tree_data)
     }
 
-    fn check_headers(data: &BTreeMap<U, Vec<V>>, headers: &Vec<String>) -> Result<(), TableError>{
+    fn check_headers(data: &BTreeMap<U, Vec<V>>, headers: &Vec<String>) -> Result<(), TableError> {
         let len = match data.values().next() {
             Some(x) => x.len(),
             None => return Err(TableError::new("data is empty")),
         };
 
-        if headers.len() != len{
-            return Err(TableError::new("header has too many columns"))
+        if headers.len() != len {
+            return Err(TableError::new("header has too many columns"));
         };
         Ok(())
+    }
+
+    pub fn iter_rows(&mut self) -> IterRows<'_, U, V, String> {
+        IterRows {
+            iter: self.data.iter(),
+            headers: &self.headers,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct IterRows<'a, K, V, H> {
+    pub headers: &'a [H],
+    pub iter: Iter<'a, K, Vec<V>>,
+}
+
+#[derive(Debug)]
+pub struct Row<'a, K, V, H> {
+    pub index: &'a K,
+    headers: std::slice::Iter<'a, H>,
+    values: std::slice::Iter<'a, V>,
+}
+
+impl<'a, K, V, H> Iterator for IterRows<'a, K, V, H> {
+    type Item = Row<'a, K, V, H>;
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        let (k, values) = self.iter.next()?;
+        Some(Row {
+            headers: self.headers.iter(),
+            index: k,
+            values: values.iter(),
+        })
+    }
+}
+
+impl<'a, K, V, H> Iterator for Row<'a, K, V, H> {
+    type Item = (&'a H, &'a V);
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        let h = self.headers.next()?;
+        let v = self.values.next()?;
+        Some((h, v))
     }
 }
 
@@ -97,29 +142,27 @@ impl<U, V> TableMetaTrait<String, String> for Table<U, V>
 where
     U: std::cmp::Ord,
 {
-    fn set_meta_data(&mut self, meta_data: HashMap<String, String>){
+    fn set_meta_data(&mut self, meta_data: HashMap<String, String>) {
         self.meta_data = Some(meta_data);
     }
 
     /// add arbitrary data to table
-    fn set_meta_key(&mut self, key: String, value: String){
-        self.meta_data = match self.meta_data{
+    fn set_meta_key(&mut self, key: String, value: String) {
+        self.meta_data = match self.meta_data {
             Some(ref mut x) => {
                 x.insert(key, value);
                 return;
-            },
-            None => {
-               Some(HashMap::new())
             }
+            None => Some(HashMap::new()),
         };
         self.set_meta_key(key, value)
     }
 
     /// get arbitrary data from table
-    fn get_meta_key(&mut self, key: &String) -> Option<&String>{
-        match self.meta_data{
+    fn get_meta_key(&mut self, key: &String) -> Option<&String> {
+        match self.meta_data {
             None => None,
-            Some(ref x) => x.get(key)
+            Some(ref x) => x.get(key),
         }
     }
 }
@@ -520,7 +563,7 @@ mod array_test {
     }
 
     #[test]
-    fn meta_data(){
+    fn meta_data() {
         use crate::TableMetaTrait;
 
         let mut t1 = new_table_large();
@@ -534,4 +577,62 @@ mod array_test {
         assert_eq!(None, t1.get_meta_key(&s!("some_other_thing")));
     }
 
+    #[test]
+    fn table_rows() {
+        use std::collections::HashMap;
+        use crate::map;
+
+        let mut t1 = new_table_large();
+
+        let expected = map! {
+            1 => map!{
+                s!("number") => "1",
+                s!("text") => "Test01",
+                s!("test") => "test",
+                s!("data") => "abcd"
+            },
+            2 => map!{
+                s!("number") => "2",
+                s!("text") => "Test02",
+                s!("test") => "test",
+                s!("data") => "efgh"
+            },
+            3 => map!{
+                s!("number") => "3",
+                s!("text") => "Test03",
+                s!("test") => "test",
+                s!("data") => "ijkl"
+            },
+            4 => map!{
+                s!("number") => "4",
+                s!("text") => "Test04",
+                s!("test") => "test",
+                s!("data") => "mnop"
+            },
+            5 => map!{
+                s!("number") => "5",
+                s!("text") => "Test05",
+                s!("test") => "test",
+                s!("data") => "qrst"
+            },
+            6 => map!{
+                s!("number") => "6",
+                s!("text") => "Test06",
+                s!("test") => "test",
+                s!("data") => "uvwx"
+            }
+        };
+
+        let mut t = HashMap::new();
+        for row in t1.iter_rows() {
+            let mut t1 = HashMap::new();
+            let i = row.index.to_owned();
+
+            for (k, v) in row {
+                t1.insert(k.to_owned(), v.to_owned());
+            }
+            t.insert(i, t1);
+        }
+        assert_eq!(t, expected);
+    }
 }
