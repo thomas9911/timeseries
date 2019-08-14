@@ -1,12 +1,15 @@
 use core::borrow::Borrow;
 use core::ops::RangeBounds;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::enums::IndexOrColumn;
 use crate::traits::{BtreeMapTrait, TableMetaTrait, TableTrait};
 use crate::TableError;
 
 use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, Values, ValuesMut};
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 ///
 ///
@@ -33,6 +36,7 @@ use std::collections::btree_map::{Entry, Iter, IterMut, Keys, Range, RangeMut, V
 ///  Table::new(headers, indexes, data).unwrap();
 ///```
 ///
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialEq, Clone)]
 pub struct Table<U, V>
 where
@@ -63,6 +67,138 @@ where
         let data = Self::to_btreemap(indexes, data)?;
         Self::check_headers(&data, &headers)?;
         Ok(Table::new_btreemap(headers, data))
+    }
+
+    ///Creates table from data in this form:
+    ///```json
+    /// {
+    ///   1: {
+    ///        "test": "testing",
+    ///        "number": "1"
+    ///      },
+    ///   2: {
+    ///        "test": "testing",
+    ///        "number": "2"
+    ///      },
+    ///   3: {
+    ///        "test": "testing",
+    ///        "number": "3"
+    ///      }
+    /// }
+    ///```
+    pub fn from_map(map: &HashMap<U, HashMap<String, V>>) -> Table<U, V>
+    where
+        U: std::hash::Hash + Clone,
+        V: Clone,
+    {
+        let headers = Self::map_create_headers(map);
+
+        let mut data = BTreeMap::new();
+
+        for (index, m) in map.iter() {
+            let mut row = vec![];
+            for k in headers.iter() {
+                row.push(m[k].to_owned());
+            }
+            data.insert(index.to_owned(), row);
+        }
+
+        Table::new_btreemap(headers, data)
+    }
+
+    ///Creates table from data in this form and returns an error if it does not fit:
+    ///```json
+    /// {
+    ///   1: {
+    ///        "test": "testing",
+    ///        "number": "1"
+    ///      },
+    ///   2: {
+    ///        "test": "testing",
+    ///        "number": "2"
+    ///      },
+    ///   3: {
+    ///        "test": "testing",
+    ///        "number": "3"
+    ///      }
+    /// }
+    ///```
+    pub fn from_map_checked(map: &HashMap<U, HashMap<String, V>>) -> Result<Table<U, V>, TableError>
+    where
+        U: std::hash::Hash + Clone,
+        V: Clone,
+    {
+        let headers = Self::map_create_headers(map);
+
+        let mut data = BTreeMap::new();
+
+        for (index, m) in map.iter() {
+            let mut row = vec![];
+            for k in headers.iter() {
+                let v = match m.get(k) {
+                    Some(x) => x,
+                    None => {
+                        return Err(TableError::new(
+                            "Objects in the map do not contain the same keys",
+                        ))
+                    }
+                };
+                row.push(v.to_owned());
+            }
+            data.insert(index.to_owned(), row);
+        }
+
+        Ok(Table::new_btreemap(headers, data))
+    }
+
+    ///Creates table from data in this form, and return a table where every cell is wrapped in an option object:
+    ///```json
+    /// {
+    ///   1: {
+    ///        "test": "testing",
+    ///        "number": "1"
+    ///      },
+    ///   2: {
+    ///        "test": "testing",
+    ///        "number": "2",
+    ///        "extra_column": "info"
+    ///      },
+    ///   3: {
+    ///        "test": "testing",
+    ///        "number": "3"
+    ///      }
+    /// }
+    ///```
+    pub fn from_map_safe(map: &HashMap<U, HashMap<String, V>>) -> Table<U, Option<V>>
+    where
+        U: std::hash::Hash + Clone,
+        V: Clone,
+    {
+        let headers = Self::map_create_headers(map);
+
+        let mut data = BTreeMap::new();
+
+        for (index, m) in map.iter() {
+            let mut row = vec![];
+            for k in headers.iter() {
+                row.push(m.get(k).cloned());
+            }
+            data.insert(index.to_owned(), row);
+        }
+
+        Table::new_btreemap(headers, data)
+    }
+
+    fn map_create_headers<X>(map: &HashMap<U, HashMap<String, X>>) -> Vec<String> {
+        let mut header_set = BTreeSet::new();
+
+        for m in map.values() {
+            for k in m.keys() {
+                header_set.insert(k.to_owned());
+            }
+        }
+
+        header_set.into_iter().collect()
     }
 
     fn to_btreemap(indexes: Vec<U>, data: Vec<Vec<V>>) -> Result<BTreeMap<U, Vec<V>>, TableError> {
@@ -341,18 +477,11 @@ where
     }
 }
 
-impl<U, V> Table<U, V>
-where
-    U: std::cmp::Ord + Clone,
-    V: Clone,
-{
-}
-
 #[cfg(test)]
 mod array_test {
     use crate::vec2;
     use crate::Table;
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, HashMap};
 
     macro_rules! s {
         ($t:expr) => {
@@ -406,6 +535,48 @@ mod array_test {
         ];
 
         Table::new(headers, indexes, d).unwrap()
+    }
+
+    fn map_table_large<'a>() -> HashMap<u8, HashMap<String, &'a str>> {
+        use crate::map;
+        map! {
+            1 => map!{
+                s!("number") => "1",
+                s!("text") => "Test01",
+                s!("test") => "test",
+                s!("data") => "abcd"
+            },
+            2 => map!{
+                s!("number") => "2",
+                s!("text") => "Test02",
+                s!("test") => "test",
+                s!("data") => "efgh"
+            },
+            3 => map!{
+                s!("number") => "3",
+                s!("text") => "Test03",
+                s!("test") => "test",
+                s!("data") => "ijkl"
+            },
+            4 => map!{
+                s!("number") => "4",
+                s!("text") => "Test04",
+                s!("test") => "test",
+                s!("data") => "mnop"
+            },
+            5 => map!{
+                s!("number") => "5",
+                s!("text") => "Test05",
+                s!("test") => "test",
+                s!("data") => "qrst"
+            },
+            6 => map!{
+                s!("number") => "6",
+                s!("text") => "Test06",
+                s!("test") => "test",
+                s!("data") => "uvwx"
+            }
+        }
     }
 
     #[test]
@@ -579,49 +750,10 @@ mod array_test {
 
     #[test]
     fn table_rows() {
-        use crate::map;
         use std::collections::HashMap;
 
         let mut t1 = new_table_large();
-
-        let expected = map! {
-            1 => map!{
-                s!("number") => "1",
-                s!("text") => "Test01",
-                s!("test") => "test",
-                s!("data") => "abcd"
-            },
-            2 => map!{
-                s!("number") => "2",
-                s!("text") => "Test02",
-                s!("test") => "test",
-                s!("data") => "efgh"
-            },
-            3 => map!{
-                s!("number") => "3",
-                s!("text") => "Test03",
-                s!("test") => "test",
-                s!("data") => "ijkl"
-            },
-            4 => map!{
-                s!("number") => "4",
-                s!("text") => "Test04",
-                s!("test") => "test",
-                s!("data") => "mnop"
-            },
-            5 => map!{
-                s!("number") => "5",
-                s!("text") => "Test05",
-                s!("test") => "test",
-                s!("data") => "qrst"
-            },
-            6 => map!{
-                s!("number") => "6",
-                s!("text") => "Test06",
-                s!("test") => "test",
-                s!("data") => "uvwx"
-            }
-        };
+        let expected = map_table_large();
 
         let mut t = HashMap::new();
         for row in t1.iter_rows() {
@@ -634,5 +766,127 @@ mod array_test {
             t.insert(i, t1);
         }
         assert_eq!(t, expected);
+    }
+
+    #[test]
+    fn from_map() {
+        use crate::traits::TableTrait;
+
+        let input = map_table_large();
+
+        let mut expected = new_table_large();
+
+        // sort table columns
+        expected.swap_columns(0, 3).unwrap();
+        expected.swap_columns(1, 3).unwrap();
+
+        let t = Table::from_map(&input);
+
+        assert_eq!(expected, t);
+    }
+
+    #[test]
+    fn from_map_checked_ok() {
+        let input = map_table_large();
+        assert!(Table::from_map_checked(&input).is_ok());
+    }
+
+    #[test]
+    fn from_map_checked_err() {
+        let mut input = map_table_large();
+
+        input.get_mut(&3).unwrap().remove(&s!("text"));
+
+        assert!(Table::from_map_checked(&input).is_err());
+    }
+
+    #[test]
+    fn from_map_safe() {
+        use crate::traits::BtreeMapTrait;
+        let mut input = map_table_large();
+
+        // remove from 3rd row the last column
+        input.get_mut(&3).unwrap().remove(&s!("text"));
+
+        let t: Table<u8, Option<&str>> = Table::from_map_safe(&input);
+
+        let third_row = t.get(&3).unwrap();
+
+        // the second column ("number") of the 3rd row is something
+        assert_eq!(Some("3"), third_row[1]);
+
+        // the last column 3rd row is empty
+        assert_eq!(None, third_row[3]);
+    }
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod serde_test {
+    use crate::vec2;
+    use crate::Table;
+
+    fn s(x: &str) -> String {
+        String::from(x)
+    }
+
+    fn new_table_large() -> Table<u8, String> {
+        let headers = vec![s("number"), s("text"), s("test"), s("data")];
+
+        let indexes = vec![1, 2, 3, 4, 5, 6];
+        let d = vec2![
+            [s("1"), s("Test01"), s("test"), s("abcd")],
+            [s("2"), s("Test02"), s("test"), s("efgh")],
+            [s("3"), s("Test03"), s("test"), s("ijkl")],
+            [s("4"), s("Test04"), s("test"), s("mnop")],
+            [s("5"), s("Test05"), s("test"), s("qrst")],
+            [s("6"), s("Test06"), s("test"), s("uvwx")],
+        ];
+
+        Table::new(headers, indexes, d).unwrap()
+    }
+
+    #[test]
+    fn table_to_value() {
+        let t = new_table_large();
+        let t = serde_json::to_value(&t).unwrap();
+
+        let expected = serde_json::json!(
+            {
+                "data": {
+                    "1": ["1","Test01","test","abcd"],
+                    "2": ["2","Test02","test","efgh"],
+                    "3": ["3","Test03","test","ijkl"],
+                    "4": ["4","Test04","test","mnop"],
+                    "5": ["5","Test05","test","qrst"],
+                    "6": ["6","Test06","test","uvwx"]
+                },
+                "headers": ["number","text","test","data"],
+                "meta_data": null
+            }
+        );
+
+        assert_eq!(expected, t);
+    }
+
+    #[test]
+    fn value_to_table() {
+        let expected = new_table_large();
+
+        let t: Table<u8, String> = serde_json::from_value(serde_json::json!(
+            {
+                "data": {
+                    "1": ["1","Test01","test","abcd"],
+                    "2": ["2","Test02","test","efgh"],
+                    "3": ["3","Test03","test","ijkl"],
+                    "4": ["4","Test04","test","mnop"],
+                    "5": ["5","Test05","test","qrst"],
+                    "6": ["6","Test06","test","uvwx"]
+                },
+                "headers": ["number","text","test","data"],
+                "meta_data": null
+            }
+        )).unwrap();
+
+        assert_eq!(expected, t);
     }
 }

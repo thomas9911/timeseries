@@ -69,3 +69,30 @@ macro_rules! map {
         }
     };
 }
+
+
+#[test]
+fn nested() {
+    use std::collections::HashMap;
+
+    let mut expected = HashMap::new();
+    let mut nested_1 = HashMap::new();
+    let mut nested_2 = HashMap::new();
+
+    nested_1.insert("nested", "123");
+    nested_2.insert("other_nested", "456");
+
+    expected.insert("test", nested_1);
+    expected.insert("test2", nested_2);
+
+    let t = map! {
+        "test" => map!{
+            "nested" => "123"
+        },
+        "test2" => map!{
+            "other_nested" => "456"
+        },
+    };
+
+    assert_eq!(expected, t);
+}

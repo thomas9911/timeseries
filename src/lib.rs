@@ -7,6 +7,9 @@ pub extern crate ndarray;
 #[cfg(feature = "csv")]
 pub extern crate csv;
 
+#[cfg(feature = "serde")]
+pub extern crate serde;
+
 // use chrono::DateTime;
 
 // pub fn dt(datetime: &str) -> chrono::ParseResult<chrono::DateTime<chrono::FixedOffset>> {

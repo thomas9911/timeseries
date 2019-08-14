@@ -1,5 +1,5 @@
-use chrono::{DateTime, FixedOffset};
 use std::collections::BTreeMap;
+use timeseries::chrono::{DateTime, FixedOffset};
 use timeseries::{vec2, Table};
 
 macro_rules! s {
@@ -10,12 +10,12 @@ macro_rules! s {
 
 macro_rules! dt {
     ($t:expr) => {
-        chrono::DateTime::parse_from_rfc3339($t)
+        timeseries::chrono::DateTime::parse_from_rfc3339($t)
     };
 }
 
 fn main() {
-    let now: DateTime<FixedOffset> = chrono::Utc::now().into();
+    let now: DateTime<FixedOffset> = timeseries::chrono::Utc::now().into();
     let headers = vec![s!("h1"), s!("h2")];
     let times = vec![dt!("2019-01-01T12:00:00Z").unwrap(), now.clone()];
     let d = vec2![["Hark", "Bark"], ["Hans", "kaas"],];
