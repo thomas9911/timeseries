@@ -820,10 +820,11 @@ mod array_test {
     }
 }
 
-#[cfg(all(test, feature = "serde"))]
-mod serde_test {
+#[cfg(all(test, feature = "serialize"))]
+mod serde_testing {
     use crate::vec2;
     use crate::Table;
+    use serde_test::{assert_tokens, Token};
 
     fn s(x: &str) -> String {
         String::from(x)
@@ -845,48 +846,75 @@ mod serde_test {
         Table::new(headers, indexes, d).unwrap()
     }
 
-    #[test]
-    fn table_to_value() {
-        let t = new_table_large();
-        let t = serde_json::to_value(&t).unwrap();
-
-        let expected = serde_json::json!(
-            {
-                "data": {
-                    "1": ["1","Test01","test","abcd"],
-                    "2": ["2","Test02","test","efgh"],
-                    "3": ["3","Test03","test","ijkl"],
-                    "4": ["4","Test04","test","mnop"],
-                    "5": ["5","Test05","test","qrst"],
-                    "6": ["6","Test06","test","uvwx"]
-                },
-                "headers": ["number","text","test","data"],
-                "meta_data": null
-            }
-        );
-
-        assert_eq!(expected, t);
+    fn serde_tokens() -> &'static [Token] {
+        &[
+            Token::Struct {
+                len: 3,
+                name: "Table",
+            },
+            Token::String("headers"),
+            Token::Seq { len: Some(4) },
+            Token::String("number"),
+            Token::String("text"),
+            Token::String("test"),
+            Token::String("data"),
+            Token::SeqEnd,
+            Token::String("data"),
+            Token::Map { len: Some(6) },
+            Token::U8(1),
+            Token::Seq { len: Some(4) },
+            Token::String("1"),
+            Token::String("Test01"),
+            Token::String("test"),
+            Token::String("abcd"),
+            Token::SeqEnd,
+            Token::U8(2),
+            Token::Seq { len: Some(4) },
+            Token::String("2"),
+            Token::String("Test02"),
+            Token::String("test"),
+            Token::String("efgh"),
+            Token::SeqEnd,
+            Token::U8(3),
+            Token::Seq { len: Some(4) },
+            Token::String("3"),
+            Token::String("Test03"),
+            Token::String("test"),
+            Token::String("ijkl"),
+            Token::SeqEnd,
+            Token::U8(4),
+            Token::Seq { len: Some(4) },
+            Token::String("4"),
+            Token::String("Test04"),
+            Token::String("test"),
+            Token::String("mnop"),
+            Token::SeqEnd,
+            Token::U8(5),
+            Token::Seq { len: Some(4) },
+            Token::String("5"),
+            Token::String("Test05"),
+            Token::String("test"),
+            Token::String("qrst"),
+            Token::SeqEnd,
+            Token::U8(6),
+            Token::Seq { len: Some(4) },
+            Token::String("6"),
+            Token::String("Test06"),
+            Token::String("test"),
+            Token::String("uvwx"),
+            Token::SeqEnd,
+            Token::MapEnd,
+            Token::String("meta_data"),
+            Token::None,
+            Token::StructEnd,
+        ]
     }
 
     #[test]
-    fn value_to_table() {
-        let expected = new_table_large();
+    fn table_serde_de_ser() {
+        let t = new_table_large();
+        let expected = serde_tokens();
 
-        let t: Table<u8, String> = serde_json::from_value(serde_json::json!(
-            {
-                "data": {
-                    "1": ["1","Test01","test","abcd"],
-                    "2": ["2","Test02","test","efgh"],
-                    "3": ["3","Test03","test","ijkl"],
-                    "4": ["4","Test04","test","mnop"],
-                    "5": ["5","Test05","test","qrst"],
-                    "6": ["6","Test06","test","uvwx"]
-                },
-                "headers": ["number","text","test","data"],
-                "meta_data": null
-            }
-        )).unwrap();
-
-        assert_eq!(expected, t);
+        assert_tokens(&t, &expected);
     }
 }

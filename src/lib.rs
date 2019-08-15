@@ -10,6 +10,9 @@ pub extern crate csv;
 #[cfg(feature = "serde")]
 pub extern crate serde;
 
+#[cfg(all(test, feature = "serde_test"))]
+extern crate serde_test;
+
 // use chrono::DateTime;
 
 // pub fn dt(datetime: &str) -> chrono::ParseResult<chrono::DateTime<chrono::FixedOffset>> {
