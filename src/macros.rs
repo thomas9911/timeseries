@@ -70,7 +70,6 @@ macro_rules! map {
     };
 }
 
-
 #[test]
 fn nested() {
     use std::collections::HashMap;

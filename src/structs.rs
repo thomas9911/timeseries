@@ -238,6 +238,14 @@ where
             headers: &self.headers,
         }
     }
+    pub fn iter_columns(&mut self) -> IterColumns<'_, U, V, String> {
+        IterColumns {
+            indexes: self.data.keys(),
+            values: self.data.values(),
+            headers: self.headers.iter(),
+            counter: (0..self.headers.len()),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -271,6 +279,44 @@ impl<'a, K, V, H> Iterator for Row<'a, K, V, H> {
         let h = self.headers.next()?;
         let v = self.values.next()?;
         Some((h, v))
+    }
+}
+
+#[derive(Debug)]
+pub struct IterColumns<'a, K, V, H> {
+    pub headers: std::slice::Iter<'a, H>,
+    counter: std::ops::Range<usize>,
+    indexes: Keys<'a, K, Vec<V>>,
+    values: Values<'a, K, Vec<V>>,
+}
+
+#[derive(Debug)]
+pub struct Column<'a, K, V, H> {
+    pub header: &'a H,
+    pub column_index: usize,
+    indexes: Keys<'a, K, Vec<V>>,
+    values: Values<'a, K, Vec<V>>,
+}
+
+impl<'a, K, V, H> Iterator for IterColumns<'a, K, V, H> {
+    type Item = Column<'a, K, V, H>;
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        let c = self.counter.next()?;
+        Some(Column {
+            header: self.headers.next()?,
+            column_index: c,
+            indexes: self.indexes.clone(),
+            values: self.values.clone(),
+        })
+    }
+}
+
+impl<'a, K, V, H> Iterator for Column<'a, K, V, H> {
+    type Item = (&'a K, &'a V);
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
+        let k = self.indexes.next()?;
+        let v = self.values.next()?.get(self.column_index)?;
+        Some((k, v))
     }
 }
 
@@ -766,6 +812,25 @@ mod array_test {
             t.insert(i, t1);
         }
         assert_eq!(t, expected);
+    }
+
+    #[test]
+    fn table_columns() {
+        let mut t1 = new_table_large();
+        let expected = vec![
+            "number", "1", "2", "3", "4", "5", "6", "text", "Test01", "Test02", "Test03", "Test04",
+            "Test05", "Test06", "test", "test", "test", "test", "test", "test", "test", "data",
+            "abcd", "efgh", "ijkl", "mnop", "qrst", "uvwx",
+        ];
+        let mut t = vec![];
+        for column in t1.iter_columns() {
+            let h = column.header.clone();
+            t.push(h);
+            for (_index, val) in column {
+                t.push(String::from(*val));
+            }
+        }
+        assert_eq!(expected, t);
     }
 
     #[test]
