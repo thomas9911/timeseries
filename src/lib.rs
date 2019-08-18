@@ -10,6 +10,9 @@ pub extern crate csv;
 #[cfg(feature = "serde")]
 pub extern crate serde;
 
+#[cfg(feature = "num")]
+pub extern crate num_traits;
+
 #[cfg(all(test, feature = "serde_test"))]
 extern crate serde_test;
 

@@ -232,13 +232,64 @@ where
         Ok(())
     }
 
-    pub fn iter_rows(&mut self) -> IterRows<'_, U, V, String> {
+    // pub fn fold<B, F>(self, init: B, f: F) -> Vec<B> where
+    // Self: Sized,
+    // B: Clone,
+    // F: FnMut(B, (&U, &V)) -> B + Copy,
+    // {
+    //     let mut outputs = Vec::new();
+    //     for col in self.iter_columns(){
+    //         let start = init.clone();
+    //         outputs.push(col.fold(start, f))
+    //     };
+    //     outputs
+    // }
+
+    pub fn fold_columns<B, F>(&self, init: B, f: F) -> Vec<(String, B)>
+    where
+        Self: Sized,
+        B: Clone,
+        F: FnMut(B, (&U, &V)) -> B + Copy,
+    {
+        let mut outputs = Vec::new();
+        for col in self.iter_columns() {
+            let start = init.clone();
+            outputs.push((col.header.to_owned(), col.fold(start, f)))
+        }
+        outputs
+    }
+
+    pub fn sum_columns(&self) -> Vec<(String, V)>
+    where
+        V: std::ops::Add + Clone + Default + From<<V as std::ops::Add>::Output>,
+    {
+        self.fold_columns(V::default(), |x, (_k, v)| V::from(x + v.clone()))
+    }
+
+    #[cfg(feature = "num")]
+    pub fn avg_columns(&self) -> Vec<(String, V)>
+    where
+        V: num_traits::Num
+            + num_traits::NumCast
+            + Clone
+            + Default
+            + From<<V as std::ops::Add>::Output>,
+    {
+        let len: V = num_traits::cast(self.len()).unwrap();
+        self.sum_columns()
+            .iter()
+            .map(move |(k, v)| (k.to_owned(), v.to_owned() / len.clone()))
+            .collect()
+    }
+
+    pub fn iter_rows(&self) -> IterRows<'_, U, V, String> {
         IterRows {
             iter: self.data.iter(),
             headers: &self.headers,
         }
     }
-    pub fn iter_columns(&mut self) -> IterColumns<'_, U, V, String> {
+
+    pub fn iter_columns(&self) -> IterColumns<'_, U, V, String> {
         IterColumns {
             indexes: self.data.keys(),
             values: self.data.values(),
@@ -247,6 +298,46 @@ where
         }
     }
 }
+
+// impl<'a, 'b, K: std::cmp::Ord, V>
+// TableIterator<'a, IterRows<'a, K, V, String, Iter<'_, K, Vec<V>>>, IterColumns<'a, K, V, String>> for Table<K, V>{
+//     fn iter_rows(&mut self) -> IterRows<'_, K, V, String, Iter<'_, K, Vec<V>>> {
+//         IterRows {
+//             iter: self.data.iter(),
+//             headers: &self.headers[..],
+//         }
+//     }
+
+//     fn iter_columns(&mut self) -> IterColumns<'a, K, V, String> {
+//         IterColumns {
+//             indexes: self.data.keys(),
+//             values: self.data.values(),
+//             headers: self.headers.iter(),
+//             counter: (0..self.headers.len()),
+//         }
+//     }
+// }
+
+// impl<'a, U: std::cmp::Ord, V> TableIterator for Table<U, V>{
+//     type RowIter<'a> = IterRows<'a, U, V, String>;
+//     type ColumnIter<'a> = IterColumns<'a, U, V, String>;
+
+//     fn iter_rows(&'a mut self) -> Self::RowIter {
+//         IterRows {
+//             iter: self.data.iter(),
+//             headers: &self.headers,
+//         }
+//     }
+
+//     fn iter_columns(&'a mut self) -> Self::ColumnIter {
+//         IterColumns {
+//             indexes: self.data.keys(),
+//             values: self.data.values(),
+//             headers: self.headers.iter(),
+//             counter: (0..self.headers.len()),
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 pub struct IterRows<'a, K, V, H> {
@@ -261,7 +352,7 @@ pub struct Row<'a, K, V, H> {
     values: std::slice::Iter<'a, V>,
 }
 
-impl<'a, K, V, H> Iterator for IterRows<'a, K, V, H> {
+impl<'a, 'b, K, V, H> Iterator for IterRows<'a, K, V, H> {
     type Item = Row<'a, K, V, H>;
     fn next(&mut self) -> Option<<Self as Iterator>::Item> {
         let (k, values) = self.iter.next()?;
@@ -583,6 +674,22 @@ mod array_test {
         Table::new(headers, indexes, d).unwrap()
     }
 
+    fn new_table_data<'a>() -> Table<u8, i32> {
+        let headers = vec![s!("p10"), s!("data"), s!("twentyfive"), s!("squares")];
+
+        let indexes = vec![1, 2, 3, 4, 5, 6];
+        let d = vec2![
+            [10, 10, 25, 01],
+            [20, 23, 25, 04],
+            [30, 36, 25, 09],
+            [40, 49, 25, 16],
+            [50, 51, 25, 25],
+            [60, 68, 25, 36],
+        ];
+
+        Table::new(headers, indexes, d).unwrap()
+    }
+
     fn map_table_large<'a>() -> HashMap<u8, HashMap<String, &'a str>> {
         use crate::map;
         map! {
@@ -798,7 +905,7 @@ mod array_test {
     fn table_rows() {
         use std::collections::HashMap;
 
-        let mut t1 = new_table_large();
+        let t1 = new_table_large();
         let expected = map_table_large();
 
         let mut t = HashMap::new();
@@ -816,7 +923,7 @@ mod array_test {
 
     #[test]
     fn table_columns() {
-        let mut t1 = new_table_large();
+        let t1 = new_table_large();
         let expected = vec![
             "number", "1", "2", "3", "4", "5", "6", "text", "Test01", "Test02", "Test03", "Test04",
             "Test05", "Test06", "test", "test", "test", "test", "test", "test", "test", "data",
@@ -831,6 +938,70 @@ mod array_test {
             }
         }
         assert_eq!(expected, t);
+    }
+
+    #[test]
+    fn table_fold_column_str() {
+        let expected = vec![
+            (s!("number"), s!("123456")),
+            (s!("text"), s!("Test01Test02Test03Test04Test05Test06")),
+            (s!("test"), s!("testtesttesttesttesttest")),
+            (s!("data"), s!("abcdefghijklmnopqrstuvwx")),
+        ];
+
+        let t1 = new_table_large();
+        let output = t1.fold_columns(String::new(), |mut x, (_k, v)| {
+            x.push_str(v);
+            x
+        });
+
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    fn table_fold_column_number() {
+        let expected = vec![
+            (s!("p10"), 210),
+            (s!("data"), 237),
+            (s!("twentyfive"), 150),
+            (s!("squares"), 91),
+        ];
+
+        let t1 = new_table_data();
+        let output = t1.fold_columns(0, |x, (_k, v)| x + v);
+
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    fn table_sum_column_number() {
+        let expected = vec![
+            (s!("p10"), 210),
+            (s!("data"), 237),
+            (s!("twentyfive"), 150),
+            (s!("squares"), 91),
+        ];
+
+        let t1 = new_table_data();
+        let output = t1.sum_columns();
+
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    #[cfg(feature = "num")]
+    fn table_avg_column_number() {
+        let expected = vec![
+            (s!("p10"), 35),
+            (s!("data"), 39),
+            (s!("twentyfive"), 25),
+            (s!("squares"), 15),
+        ];
+
+        let t1 = new_table_data();
+        let output = t1.avg_columns();
+
+        assert_eq!(expected, output);
     }
 
     #[test]

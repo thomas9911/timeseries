@@ -7,16 +7,20 @@ edition = "2018"
 
 [features]
 serialize = ["serde", "serde_test"]
+num  = ["num-traits"]
 
 [dependencies]
 
 [dependencies.chrono]
 version = "*"
 optional = true
+[dependencies.csv]
+version = "*"
+optional = true
 [dependencies.ndarray]
 version = "*"
 optional = true
-[dependencies.csv]
+[dependencies.num-traits]
 version = "*"
 optional = true
 [dependencies.serde]

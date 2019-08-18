@@ -79,3 +79,11 @@ pub trait TableMetaTrait<M, N> {
     fn set_meta_key(&mut self, key: M, value: N);
     fn get_meta_key(&mut self, key: &M) -> Option<&N>;
 }
+
+pub trait TableIterator {
+    type RowIter;
+    type ColumnIter;
+
+    fn iter_rows(&mut self) -> Self::RowIter;
+    fn iter_columns(&mut self) -> Self::ColumnIter;
+}

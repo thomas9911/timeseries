@@ -1,7 +1,7 @@
 #![cfg(feature = "ndarray")]
 
 use crate::TableError;
-use chrono::Datelike;
+// use chrono::Datelike;
 use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq)]
