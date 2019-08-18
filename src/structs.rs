@@ -40,7 +40,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Table<U, V>
 where
-    U: std::cmp::Ord,
+    // U: std::cmp::Ord,
+    U: std::fmt::Debug + std::cmp::Ord,
+    V: std::fmt::Debug,
 {
     pub headers: Vec<String>,
     pub data: BTreeMap<U, Vec<V>>,
@@ -49,7 +51,9 @@ where
 
 impl<U, V> Table<U, V>
 where
-    U: std::cmp::Ord,
+    // U: std::cmp::Ord,
+    U: std::fmt::Debug + std::cmp::Ord,
+    V: std::fmt::Debug,
 {
     pub fn new_btreemap(headers: Vec<String>, data: BTreeMap<U, Vec<V>>) -> Table<U, V> {
         Table {
@@ -278,8 +282,39 @@ where
         let len: V = num_traits::cast(self.len()).unwrap();
         self.sum_columns()
             .iter()
-            .map(move |(k, v)| (k.to_owned(), v.to_owned() / len.clone()))
+            .map(|(k, v)| (k.to_owned(), v.to_owned() / len.clone()))
             .collect()
+    }
+
+    #[cfg(feature = "num")]
+    pub fn var_columns(&self) -> Vec<(String, V)>
+    where
+        V: num_traits::Num
+            + num_traits::NumCast
+            + std::cmp::PartialOrd
+            + Clone
+            + Default
+            + From<<V as std::ops::Add>::Output>,
+    {
+        let mut t = Vec::new();
+        let len: V = num_traits::cast(self.len()).unwrap();
+        for (p, q) in self.iter_columns().zip(self.avg_columns()) {
+            let avg = q.1;
+            let mut result = V::zero();
+            let header = p.header.to_owned();
+
+            for (_, v) in p {
+                let s;
+                if v > &avg {
+                    s = v.to_owned() - avg.to_owned();
+                } else {
+                    s = v.to_owned() - avg.to_owned();
+                }
+                result = result + s.clone() * s;
+            }
+            t.push((header, result.to_owned() / len.clone()))
+        }
+        t
     }
 
     pub fn iter_rows(&self) -> IterRows<'_, U, V, String> {
@@ -413,7 +448,9 @@ impl<'a, K, V, H> Iterator for Column<'a, K, V, H> {
 
 impl<U, V> TableMetaTrait<String, String> for Table<U, V>
 where
-    U: std::cmp::Ord,
+    // U: std::cmp::Ord,
+    U: std::fmt::Debug + std::cmp::Ord,
+    V: std::fmt::Debug,
 {
     fn set_meta_data(&mut self, meta_data: HashMap<String, String>) {
         self.meta_data = Some(meta_data);
@@ -442,7 +479,9 @@ where
 
 impl<U, V> BtreeMapTrait<U, Vec<V>> for Table<U, V>
 where
-    U: std::cmp::Ord,
+    // U: std::cmp::Ord,
+    U: std::fmt::Debug + std::cmp::Ord,
+    V: std::fmt::Debug,
 {
     fn clear(&mut self) {
         self.data.clear()
@@ -535,8 +574,10 @@ where
 }
 impl<U, V> TableTrait<U, Vec<V>, Table<U, V>> for Table<U, V>
 where
-    U: std::cmp::Ord + Clone,
-    V: Clone,
+    // U: std::cmp::Ord + Clone,
+    // V: Clone,
+    U: std::fmt::Debug + std::cmp::Ord + Clone,
+    V: std::fmt::Debug + Clone,
 {
     fn slice_owned<T: ?Sized, R>(&self, range: R) -> Table<U, V>
     where
@@ -685,6 +726,22 @@ mod array_test {
             [40, 49, 25, 16],
             [50, 51, 25, 25],
             [60, 68, 25, 36],
+        ];
+
+        Table::new(headers, indexes, d).unwrap()
+    }
+
+    fn new_table_float_data<'a>() -> Table<u8, f32> {
+        let headers = vec![s!("p10"), s!("data"), s!("twentyfive"), s!("squares")];
+
+        let indexes = vec![1, 2, 3, 4, 5, 6];
+        let d = vec2![
+            [10.0, 10.0, 25.0, 01.0],
+            [20.0, 23.0, 25.0, 04.0],
+            [30.0, 36.0, 25.0, 09.0],
+            [40.0, 49.0, 25.0, 16.0],
+            [50.0, 51.0, 25.0, 25.0],
+            [60.0, 68.0, 25.0, 36.0],
         ];
 
         Table::new(headers, indexes, d).unwrap()
@@ -1000,6 +1057,38 @@ mod array_test {
 
         let t1 = new_table_data();
         let output = t1.avg_columns();
+
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    #[cfg(feature = "num")]
+    fn table_std_column_number() {
+        let expected = vec![
+            (s!("p10"), 291),
+            (s!("data"), 365),
+            (s!("twentyfive"), 0),
+            (s!("squares"), 149),
+        ];
+
+        let t1 = new_table_data();
+        let output = t1.var_columns();
+
+        assert_eq!(expected, output);
+    }
+
+    #[test]
+    #[cfg(feature = "num")]
+    fn table_var_column_float() {
+        let expected = vec![
+            (s!("p10"), 291.66666),
+            (s!("data"), 364.91666),
+            (s!("twentyfive"), 0.0),
+            (s!("squares"), 149.13887),
+        ];
+
+        let t1 = new_table_float_data();
+        let output = t1.var_columns();
 
         assert_eq!(expected, output);
     }
