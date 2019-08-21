@@ -7,8 +7,10 @@ pub type DateTable<U, V> = Table<U, V>;
 
 impl<U, V> DateTable<U, V>
 where
-    U: Datelike + std::cmp::Ord + Clone,
-    V: Clone,
+    U: std::fmt::Debug + Datelike + std::cmp::Ord + Clone,
+    V: std::fmt::Debug + Clone,
+    // U: Datelike + std::cmp::Ord + Clone,
+    // V: Clone,
 {
     pub fn cheese() {}
 }

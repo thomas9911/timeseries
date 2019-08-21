@@ -14,7 +14,7 @@ pub fn read_csv_to_datetable<R, U, F, Y>(
 ) -> Result<Table<U, String>, TableReadError>
 where
     R: std::io::Read,
-    U: std::cmp::Ord,
+    U: std::fmt::Debug + std::cmp::Ord,
     F: Fn(&str) -> Result<U, Y>,
     Y: std::fmt::Display,
 {

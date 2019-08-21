@@ -23,6 +23,9 @@ optional = true
 [dependencies.num-traits]
 version = "*"
 optional = true
+[dependencies.rayon]
+version = "*"
+optional = true
 [dependencies.serde]
 version = "^1"
 features = ["derive"]
@@ -30,6 +33,15 @@ optional = true
 [dependencies.serde_test]
 version = "^1"
 optional = true
+[dependencies.unqlite]
+version = "*"
+optional = true
+[dependencies.bincode]
+version = "*"
+optional = true
+
+[dev-dependencies]
+tempfile = "*"
 
 [[example]]
 name = "data"

@@ -1,3 +1,6 @@
+#[cfg(feature = "bincode")]
+pub extern crate bincode;
+
 #[cfg(feature = "chrono")]
 pub extern crate chrono;
 
@@ -13,8 +16,14 @@ pub extern crate serde;
 #[cfg(feature = "num")]
 pub extern crate num_traits;
 
+#[cfg(feature = "rayon")]
+pub extern crate rayon;
+
 #[cfg(all(test, feature = "serde_test"))]
 extern crate serde_test;
+
+#[cfg(feature = "unqlite")]
+extern crate unqlite;
 
 // use chrono::DateTime;
 
@@ -33,7 +42,11 @@ mod structs;
 #[macro_use]
 mod macros;
 pub mod enums;
+#[cfg(test)]
+mod tests;
 mod traits;
+#[cfg(feature = "unqlite")]
+mod unqlite_structs;
 mod utils;
 
 #[cfg(feature = "chrono")]
