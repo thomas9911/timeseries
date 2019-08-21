@@ -407,40 +407,32 @@ mod folding_test {
 
     macro_rules! assert_float_eq {
         ($x:expr, $y:expr) => {
-            let a: Vec<(_, u32)> = $x.iter().map(|(k, v)| (k, (v*1000.0).round() as u32)).collect();
-            let b: Vec<(_, u32)> = $y.iter().map(|(k, v)| (k, (v*1000.0).round() as u32)).collect();
+            let a: Vec<(_, u32)> = $x
+                .iter()
+                .map(|(k, v)| (k, (v * 1000.0).round() as u32))
+                .collect();
+            let b: Vec<(_, u32)> = $y
+                .iter()
+                .map(|(k, v)| (k, (v * 1000.0).round() as u32))
+                .collect();
             assert_eq!(a, b);
         };
     }
 
     #[test]
-    fn assert_float_eq_test_equal(){
-        let t: Vec<(String, f32)> = vec![
-            (s!("test"), 12.01501),
-            (s!("other"), 11.1843),
-        ];
-        let u: Vec<(String, f32)> = vec![
-            (s!("test"), 12.01498),
-            (s!("other"), 11.1843),
-        ];
+    fn assert_float_eq_test_equal() {
+        let t: Vec<(String, f32)> = vec![(s!("test"), 12.01501), (s!("other"), 11.1843)];
+        let u: Vec<(String, f32)> = vec![(s!("test"), 12.01498), (s!("other"), 11.1843)];
         assert_float_eq!(t, u);
     }
 
     #[test]
     #[should_panic]
-    fn assert_float_eq_test_not_equal(){
-        let t: Vec<(String, f32)> = vec![
-            (s!("test"), 12.01501),
-            (s!("other"), 11.1843),
-        ];
-        let u: Vec<(String, f32)> = vec![
-            (s!("test"), 12.01401),
-            (s!("other"), 11.1843),
-        ];
+    fn assert_float_eq_test_not_equal() {
+        let t: Vec<(String, f32)> = vec![(s!("test"), 12.01501), (s!("other"), 11.1843)];
+        let u: Vec<(String, f32)> = vec![(s!("test"), 12.01401), (s!("other"), 11.1843)];
         assert_float_eq!(t, u);
     }
-
-
 
     #[test]
     fn table_fold_column_str() {

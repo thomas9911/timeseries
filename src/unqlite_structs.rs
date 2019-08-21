@@ -2,7 +2,7 @@
 
 use crate::{BtreeMapTrait, Table, TableMetaTrait, TableTrait};
 use std::collections::{BTreeMap, HashMap};
-use unqlite::{Cursor, UnQLite, KV, Transaction};
+use unqlite::{Cursor, Transaction, UnQLite, KV};
 
 #[derive(Debug)]
 pub enum LoadError {
@@ -117,9 +117,9 @@ where
     pub fn save_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
         let db = UnQLite::create(filename);
 
-        let first = match db.first(){
+        let first = match db.first() {
             Some(_) => return Err(LoadError::DbTableError(DbTableError::DbExists)),
-            None => ()
+            None => (),
         };
 
         db.kv_store(
@@ -128,29 +128,26 @@ where
         )?;
 
         for (k, v) in self.iter() {
-            db.kv_store(
-                bincode::serialize(k)?,
-                bincode::serialize(v)?,
-            )?;
+            db.kv_store(bincode::serialize(k)?, bincode::serialize(v)?)?;
         }
         Ok(())
     }
 
     pub fn save_unqlite_override<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
-        match self.save_unqlite(&filename){
+        match self.save_unqlite(&filename) {
             Ok(x) => return Ok(x),
             Err(LoadError::DbTableError(DbTableError::DbExists)) => {
                 self.delete_unqlite(&filename)?;
                 self.save_unqlite(&filename)?;
-            },
-            Err(e) => return Err(e)
+            }
+            Err(e) => return Err(e),
         };
         Ok(())
     }
 
     pub fn delete_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
         let db = UnQLite::create(filename);
-        let mut first = match db.first(){
+        let mut first = match db.first() {
             None => return Ok(()),
             Some(x) => x,
         };

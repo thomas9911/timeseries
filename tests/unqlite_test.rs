@@ -3,7 +3,7 @@
 extern crate tempfile;
 use timeseries;
 
-use timeseries::{Table, vec2};
+use timeseries::{vec2, Table};
 
 macro_rules! s {
     ($t:expr) => {
@@ -58,4 +58,3 @@ fn unqlite_table() {
 
     assert_eq!(t, t1);
 }
-
