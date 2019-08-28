@@ -77,7 +77,7 @@ pub trait TableTrait<K: Ord, V, B: BtreeMapTrait<K, V>> {
 pub trait TableMetaTrait<M, N> {
     fn set_meta_data(&mut self, meta_data: HashMap<M, N>);
     fn set_meta_key(&mut self, key: M, value: N);
-    fn get_meta_key(&mut self, key: &M) -> Option<&N>;
+    fn get_meta_key(&self, key: &M) -> Option<&N>;
 }
 
 pub trait TableIterator {

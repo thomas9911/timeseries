@@ -39,6 +39,9 @@ optional = true
 [dependencies.bincode]
 version = "*"
 optional = true
+[dependencies.seahash]
+version = "*"
+optional = true
 
 [dev-dependencies]
 tempfile = "*"

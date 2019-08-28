@@ -19,6 +19,9 @@ pub extern crate num_traits;
 #[cfg(feature = "rayon")]
 pub extern crate rayon;
 
+#[cfg(feature = "seahash")]
+extern crate seahash;
+
 #[cfg(all(test, feature = "serde_test"))]
 extern crate serde_test;
 

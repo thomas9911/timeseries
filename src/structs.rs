@@ -538,7 +538,7 @@ where
     }
 
     /// get arbitrary data from table
-    fn get_meta_key(&mut self, key: &String) -> Option<&String> {
+    fn get_meta_key(&self, key: &String) -> Option<&String> {
         match self.meta_data {
             None => None,
             Some(ref x) => x.get(key),

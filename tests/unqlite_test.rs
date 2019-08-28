@@ -3,7 +3,7 @@
 extern crate tempfile;
 use timeseries;
 
-use timeseries::{vec2, Table};
+use timeseries::{vec2, BtreeMapTrait, Table, TableMetaTrait};
 
 macro_rules! s {
     ($t:expr) => {
@@ -44,16 +44,15 @@ fn new_table_data() -> Table<u8, i32> {
 }
 
 fn create_tmp_file<T>(test: T)
-    where T: FnOnce(&str) -> () + std::panic::UnwindSafe
+where
+    T: FnOnce(&str) -> () + std::panic::UnwindSafe,
 {
     let tmp_db = tempfile::NamedTempFile::new().expect("error creating test file");
     let tmp_path = tmp_db.into_temp_path();
     let tmp_path_path: &std::path::Path = tmp_path.as_ref();
     let tmp_path_str = tmp_path_path.to_str().unwrap();
 
-    let result = std::panic::catch_unwind(|| {
-        test(tmp_path_str)
-    });
+    let result = std::panic::catch_unwind(|| test(tmp_path_str));
 
     tmp_path.close().unwrap();
 
@@ -61,8 +60,8 @@ fn create_tmp_file<T>(test: T)
 }
 
 #[test]
-fn unqlite_table_int(){
-    create_tmp_file(|tmp_path_str|{
+fn unqlite_table_int() {
+    create_tmp_file(|tmp_path_str| {
         let t = new_table_data();
         t.save_unqlite(tmp_path_str).unwrap();
         let t1: Table<u8, i32> = Table::from_unqlite(tmp_path_str).unwrap();
@@ -72,12 +71,61 @@ fn unqlite_table_int(){
 }
 
 #[test]
-fn unqlite_table_string(){
-    create_tmp_file(|tmp_path_str|{
+fn unqlite_table_string() {
+    create_tmp_file(|tmp_path_str| {
         let t = new_table_large();
         t.save_unqlite(tmp_path_str).unwrap();
         let t1: Table<u8, String> = Table::from_unqlite(tmp_path_str).unwrap();
         t1.delete_unqlite(tmp_path_str).unwrap();
         assert_eq!(t, t1);
     })
+}
+
+#[test]
+fn unqlite_table_int_metadata() {
+    create_tmp_file(|tmp_path_str| {
+        let mut t = new_table_data();
+        t.set_meta_key(String::from("something"), String::from("a thing"));
+
+        t.save_unqlite(tmp_path_str).unwrap();
+        let t1: Table<u8, i32> = Table::from_unqlite(tmp_path_str).unwrap();
+
+        assert_eq!(
+            t1.get_meta_key(&String::from("something")),
+            Some(&String::from("a thing"))
+        );
+
+        t1.delete_unqlite(tmp_path_str).unwrap();
+        assert_eq!(t, t1);
+    })
+}
+
+#[test]
+fn unqlite_table_update_int() {
+    create_tmp_file(|tmp_path_str| {
+        let mut t = new_table_data();
+        t.save_unqlite(tmp_path_str).unwrap();
+
+        let t1: Table<u8, i32> = Table::from_unqlite(tmp_path_str).unwrap();
+
+        t.insert(7, vec![70, 72, 25, 49]);
+        let updated_keys = t.update_unqlite(tmp_path_str).unwrap();
+        assert_eq!(vec![7], updated_keys);
+
+        let t2: Table<u8, i32> = Table::from_unqlite(tmp_path_str).unwrap();
+
+        assert_eq!(t, t2);
+
+        t.insert(6, vec![60, 54, 25, 36]);
+        t.insert(5, vec![50, 59, 25, 25]);
+        let updated_keys = t.update_unqlite(tmp_path_str).unwrap();
+        assert_eq!(vec![5, 6], updated_keys);
+
+        let t3: Table<u8, i32> = Table::from_unqlite(tmp_path_str).unwrap();
+
+        t3.delete_unqlite(tmp_path_str).unwrap();
+        assert_eq!(t, t3);
+        assert_ne!(t, t2);
+        assert_ne!(t, t1);
+    });
 }
