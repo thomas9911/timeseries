@@ -8,6 +8,7 @@ edition = "2018"
 [features]
 serialize = ["serde", "serde_test"]
 num  = ["num-traits"]
+unqlite_db = ["unqlite", "bincode", "serde", "seahash"]
 
 [dependencies]
 
@@ -53,3 +54,7 @@ required-features = ["csv", "chrono"]
 [[example]]
 name = "array"
 required-features = ["chrono"]
+
+[[example]]
+name = "unqlite_example"
+required-features = ["unqlite_db"]

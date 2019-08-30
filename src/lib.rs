@@ -25,7 +25,7 @@ extern crate seahash;
 #[cfg(all(test, feature = "serde_test"))]
 extern crate serde_test;
 
-#[cfg(feature = "unqlite")]
+#[cfg(feature = "unqlite_db")]
 extern crate unqlite;
 
 // use chrono::DateTime;
@@ -48,7 +48,7 @@ pub mod enums;
 #[cfg(test)]
 mod tests;
 mod traits;
-#[cfg(feature = "unqlite")]
+#[cfg(feature = "unqlite_db")]
 mod unqlite_structs;
 mod utils;
 

@@ -1,4 +1,4 @@
-#![cfg(all(feature = "unqlite", feature = "bincode", feature = "seahash"))]
+#![cfg(all(feature = "unqlite", feature = "bincode", feature = "serde" , feature = "seahash"))]
 
 use crate::{BtreeMapTrait, Table, TableMetaTrait};
 use serde::{Deserialize, Serialize};
@@ -151,31 +151,6 @@ where
         Ok(table)
     }
 
-    pub fn save_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
-        let db = UnQLite::create(filename);
-
-        match db.first() {
-            Some(_) => return Err(LoadError::DbTableError(DbTableError::DbExists)),
-            None => (),
-        };
-
-        db.kv_store(
-            bincode::serialize("__HEADER")?,
-            bincode::serialize(&DbObject::new(self.headers.clone()))?,
-        )?;
-
-        db.kv_store(
-            bincode::serialize("__META_DATA")?,
-            bincode::serialize(&DbObject::new(self.meta_data.clone()))?,
-        )?;
-
-        for (k, v) in self.iter() {
-            let tmp = DbObject::new(v.clone());
-            db.kv_store(bincode::serialize(k)?, bincode::serialize(&tmp)?)?;
-        }
-        Ok(())
-    }
-
     pub fn update_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<Vec<U>, LoadError> {
         let db = UnQLite::create(filename);
         let mut changed_keys = Vec::new();
@@ -234,6 +209,31 @@ where
         Ok(changed_keys)
     }
 
+    pub fn save_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
+        let db = UnQLite::create(filename);
+
+        match db.first() {
+            Some(_) => return Err(LoadError::DbTableError(DbTableError::DbExists)),
+            None => (),
+        };
+
+        db.kv_store(
+            bincode::serialize("__HEADER")?,
+            bincode::serialize(&DbObject::new(self.headers.clone()))?,
+        )?;
+
+        db.kv_store(
+            bincode::serialize("__META_DATA")?,
+            bincode::serialize(&DbObject::new(self.meta_data.clone()))?,
+        )?;
+
+        for (k, v) in self.iter() {
+            let tmp = DbObject::new(v.clone());
+            db.kv_store(bincode::serialize(k)?, bincode::serialize(&tmp)?)?;
+        }
+        Ok(())
+    }
+
     pub fn save_unqlite_override<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
         match self.save_unqlite(&filename) {
             Ok(x) => return Ok(x),
@@ -246,16 +246,20 @@ where
         Ok(())
     }
 
+    /// removes cursors in unqlite database, but does not delete the data
     pub fn delete_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
         let db = UnQLite::create(filename);
         let mut first = match db.first() {
             None => return Ok(()),
             Some(x) => x,
         };
-        while let Some(cursor) = first.delete() {
-            first = cursor
-        }
 
+        while let Some(cursor) = db.first() {
+            match cursor.delete() {
+                Some(_) => (),
+                None => (),
+            };
+        }
         db.commit().unwrap();
         Ok(())
     }
