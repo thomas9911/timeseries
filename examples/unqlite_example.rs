@@ -1,5 +1,5 @@
 use timeseries;
-use timeseries::{vec2, BtreeMapTrait, Table, TableMetaTrait};
+use timeseries::Table;
 
 fn new_table_data() -> Table<u16, i32> {
     let headers = vec![

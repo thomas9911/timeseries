@@ -1,4 +1,5 @@
-#![cfg(all(feature = "unqlite", feature = "bincode", feature = "serde" , feature = "seahash"))]
+// #![cfg(all(feature = "unqlite", feature = "bincode", feature = "serde" , feature = "seahash"))]
+#![cfg(feature = "unqlite_db")]
 
 use crate::{BtreeMapTrait, Table, TableMetaTrait};
 use serde::{Deserialize, Serialize};
@@ -249,9 +250,9 @@ where
     /// removes cursors in unqlite database, but does not delete the data
     pub fn delete_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
         let db = UnQLite::create(filename);
-        let mut first = match db.first() {
+        match db.first() {
             None => return Ok(()),
-            Some(x) => x,
+            Some(_) => (),
         };
 
         while let Some(cursor) = db.first() {

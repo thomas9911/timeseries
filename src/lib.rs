@@ -50,6 +50,8 @@ mod tests;
 mod traits;
 #[cfg(feature = "unqlite_db")]
 mod unqlite_structs;
+#[cfg(feature = "postgresql_db")]
+mod postgresql_structs;
 mod utils;
 
 #[cfg(feature = "chrono")]
