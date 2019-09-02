@@ -1,6 +1,6 @@
 use timeseries;
 use timeseries::postgres;
-use timeseries::{PostgresConfig, Table};
+use timeseries::{BtreeMapTrait, PostgresConfig, Table};
 
 fn new_table_data() -> Table<u16, i32> {
     let headers = vec![
@@ -34,19 +34,32 @@ fn new_table_data() -> Table<u16, i32> {
 fn main() {
     let postgres_ip = "postgres://postgres@192.168.99.100:5432/postgres";
     let config = PostgresConfig::new(postgres_ip, postgres::TlsMode::None).unwrap();
-    let table = new_table_data();
+    let mut table = new_table_data();
 
     // <Table<u16, i32>>::connect_postgresql(config).unwrap();
 
+    // prepares the postgres database
     table.init_postgresql(config).unwrap();
     let config = PostgresConfig::new(postgres_ip, postgres::TlsMode::None).unwrap();
+
+    // saves the whole table to the database
     table.save_postgresql(config).unwrap();
 
+    table.insert(3000, vec![30000, 123456, 25, 900000]);
+
     let config = PostgresConfig::new(postgres_ip, postgres::TlsMode::None).unwrap();
+    // only update the keys that are different
+    table.update_postgresql(config).unwrap();
+
+    let config = PostgresConfig::new(postgres_ip, postgres::TlsMode::None).unwrap();
+    // get the table back from the postgres database
     let t1: Table<u16, i32> = Table::from_postgresql(config).unwrap();
 
     let config = PostgresConfig::new(postgres_ip, postgres::TlsMode::None).unwrap();
+    // removes all the tables from the database. The inverse of init.
     table.uninit_postgresql(config).unwrap();
 
-    assert_eq!(table, t1);
+    if table != t1 {
+        println!("tables are not the same");
+    };
 }

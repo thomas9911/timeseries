@@ -115,6 +115,89 @@ where
         Ok(())
     }
 
+    pub fn update_postgresql(&self, config: PostgresConfig) -> Result<(), PostgresqlError> {
+        let connection = Self::connect_postgresql(config)?;
+        let insert_stmt =
+            connection.prepare("INSERT INTO row (key, item, hash) VALUES ($1, $2, $3)")?;
+        let update_stmt =
+            connection.prepare("UPDATE row SET item = $2, hash = $3 WHERE key = $1")?;
+        let count_stmt =
+            connection.prepare("SELECT count(*) from row WHERE key = $1 AND hash = $2")?;
+        let exist_stmt = connection.prepare("SELECT count(*) from row WHERE key = $1")?;
+
+        let tmp = DbObject::new(self.headers.clone());
+        let data: &[&ToSql] = &[
+            &bincode::serialize("__HEADER")?,
+            &bincode::serialize(&tmp.item)?,
+            &(tmp.hash as i64),
+        ];
+
+        for row in &count_stmt.query(&[data[0], data[2]])? {
+            if row.get::<_, i64>("count") == 0 {
+                for row in &exist_stmt.query(&[data[0]])? {
+                    match row.get::<_, i64>("count") {
+                        0 => {
+                            insert_stmt.execute(data)?;
+                        }
+                        1 => {
+                            update_stmt.execute(data)?;
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        }
+
+        let tmp = DbObject::new(self.meta_data.clone());
+        let data: &[&ToSql] = &[
+            &bincode::serialize("__META_DATA")?,
+            &bincode::serialize(&tmp.item)?,
+            &(tmp.hash as i64),
+        ];
+
+        for row in &count_stmt.query(&[data[0], data[2]])? {
+            if row.get::<_, i64>("count") == 0 {
+                for row in &exist_stmt.query(&[data[0]])? {
+                    match row.get::<_, i64>("count") {
+                        0 => {
+                            insert_stmt.execute(data)?;
+                        }
+                        1 => {
+                            update_stmt.execute(data)?;
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+        }
+
+        for (k, v) in self.iter() {
+            let tmp = DbObject::new(v.clone());
+            let data: &[&ToSql] = &[
+                &bincode::serialize(k)?,
+                &bincode::serialize(&tmp.item)?,
+                &(tmp.hash as i64),
+            ];
+
+            for row in &count_stmt.query(&[data[0], data[2]])? {
+                if row.get::<_, i64>("count") == 0 {
+                    for row in &exist_stmt.query(&[data[0]])? {
+                        match row.get::<_, i64>("count") {
+                            0 => {
+                                insert_stmt.execute(data)?;
+                            }
+                            1 => {
+                                update_stmt.execute(data)?;
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn from_postgresql(config: PostgresConfig) -> Result<Table<U, V>, PostgresqlError> {
         let connection = Self::connect_postgresql(config)?;
 
