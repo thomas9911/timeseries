@@ -37,5 +37,5 @@ fn main() {
 
     let t1: Table<u16, i32> = Table::from_unqlite("./cheeses").unwrap();
 
-    println!("{:?}",t1);
+    println!("{:?}", t1);
 }

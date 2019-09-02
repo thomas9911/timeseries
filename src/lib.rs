@@ -16,17 +16,20 @@ pub extern crate serde;
 #[cfg(feature = "num")]
 pub extern crate num_traits;
 
+#[cfg(feature = "postgres")]
+pub extern crate postgres;
+
 #[cfg(feature = "rayon")]
 pub extern crate rayon;
 
 #[cfg(feature = "seahash")]
-extern crate seahash;
+pub extern crate seahash;
 
 #[cfg(all(test, feature = "serde_test"))]
 extern crate serde_test;
 
 #[cfg(feature = "unqlite_db")]
-extern crate unqlite;
+pub extern crate unqlite;
 
 // use chrono::DateTime;
 
@@ -44,21 +47,27 @@ mod ndarray_structs;
 mod structs;
 #[macro_use]
 mod macros;
+#[cfg(feature = "serde")]
+mod db_structs;
 pub mod enums;
+#[cfg(feature = "postgresql_db")]
+mod postgresql_structs;
 #[cfg(test)]
 mod tests;
 mod traits;
 #[cfg(feature = "unqlite_db")]
 mod unqlite_structs;
-#[cfg(feature = "postgresql_db")]
-mod postgresql_structs;
 mod utils;
 
 #[cfg(feature = "chrono")]
 pub use chrono_structs::*;
+#[cfg(feature = "serde")]
+pub use db_structs::*;
 pub use errors::*;
 #[cfg(feature = "ndarray")]
 pub use ndarray_structs::*;
+#[cfg(feature = "postgresql_db")]
+pub use postgresql_structs::*;
 pub use structs::*;
 pub use traits::*;
 pub use utils::*;

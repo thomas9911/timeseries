@@ -1,80 +1,32 @@
-// #![cfg(all(feature = "unqlite", feature = "bincode", feature = "serde" , feature = "seahash"))]
 #![cfg(feature = "unqlite_db")]
 
-use crate::{BtreeMapTrait, Table, TableMetaTrait};
+use crate::{BtreeMapTrait, DbObject, DbTableError, Table, TableMetaTrait};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use unqlite::{Cursor, Transaction, UnQLite, KV};
 
 #[derive(Debug)]
-pub enum LoadError {
+pub enum UnqliteError {
     Bincode(std::boxed::Box<bincode::ErrorKind>),
     DbTableError(DbTableError),
     UnQLite(unqlite::Error),
 }
 
-impl std::fmt::Display for LoadError {
+impl std::fmt::Display for UnqliteError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-impl From<std::boxed::Box<bincode::ErrorKind>> for LoadError {
-    fn from(err: std::boxed::Box<bincode::ErrorKind>) -> LoadError {
-        LoadError::Bincode(err)
+impl From<std::boxed::Box<bincode::ErrorKind>> for UnqliteError {
+    fn from(err: std::boxed::Box<bincode::ErrorKind>) -> UnqliteError {
+        UnqliteError::Bincode(err)
     }
 }
 
-impl From<unqlite::Error> for LoadError {
-    fn from(err: unqlite::Error) -> LoadError {
-        LoadError::UnQLite(err)
-    }
-}
-
-#[derive(Debug)]
-pub enum DbTableError {
-    DbExists,
-    DbDoesNotExist,
-    DbHeaderDoesNotExist,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DbObject<V> {
-    pub item: V,
-    pub hash: u64,
-}
-
-impl<V> DbObject<V>
-where
-    V: serde::de::DeserializeOwned + serde::Serialize,
-{
-    pub fn new(value: V) -> DbObject<V> {
-        let mut obj = DbObject {
-            item: value,
-            hash: 0,
-        };
-        obj.rehash();
-        obj
-    }
-
-    pub fn rehash(&mut self) {
-        self.hash = Self::hash(&self.item);
-    }
-
-    fn hash(value: &V) -> u64 {
-        seahash::hash(&bincode::serialize(value).unwrap())
-    }
-}
-
-impl<V> PartialEq for DbObject<V> {
-    fn eq(&self, other: &Self) -> bool {
-        self.hash == other.hash
-    }
-}
-
-impl std::fmt::Display for DbTableError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+impl From<unqlite::Error> for UnqliteError {
+    fn from(err: unqlite::Error) -> UnqliteError {
+        UnqliteError::UnQLite(err)
     }
 }
 
@@ -83,11 +35,11 @@ where
     U: std::fmt::Debug + Clone + std::cmp::Ord + serde::de::DeserializeOwned + serde::Serialize,
     V: std::fmt::Debug + Clone + serde::de::DeserializeOwned + serde::Serialize,
 {
-    pub fn from_unqlite<P: AsRef<str>>(filename: P) -> Result<Table<U, V>, LoadError> {
+    pub fn from_unqlite<P: AsRef<str>>(filename: P) -> Result<Table<U, V>, UnqliteError> {
         let db = UnQLite::create(filename);
         let mut first = db
             .first()
-            .ok_or(LoadError::DbTableError(DbTableError::DbDoesNotExist))?;
+            .ok_or(UnqliteError::DbTableError(DbTableError::DbDoesNotExist))?;
 
         // let (header_key, header_value) = first.key_value();
 
@@ -118,7 +70,7 @@ where
 
         // let mut first = db
         //     .first()
-        //     .ok_or(LoadError::DbTableError(DbTableError::DbDoesNotExist))?;
+        //     .ok_or(UnqliteError::DbTableError(DbTableError::DbDoesNotExist))?;
         while let Some(cursor) = first.next() {
             let mut n = true;
             let (item_k, item_v) = cursor.key_value();
@@ -142,7 +94,9 @@ where
             first = cursor;
         }
         if headers.item == Vec::<String>::new() {
-            return Err(LoadError::DbTableError(DbTableError::DbHeaderDoesNotExist));
+            return Err(UnqliteError::DbTableError(
+                DbTableError::DbHeaderDoesNotExist,
+            ));
         }
 
         let mut table = Table::new_btreemap(headers.item, btable);
@@ -152,13 +106,13 @@ where
         Ok(table)
     }
 
-    pub fn update_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<Vec<U>, LoadError> {
+    pub fn update_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<Vec<U>, UnqliteError> {
         let db = UnQLite::create(filename);
         let mut changed_keys = Vec::new();
 
         match db.first() {
             Some(_) => (),
-            None => return Err(LoadError::DbTableError(DbTableError::DbDoesNotExist)),
+            None => return Err(UnqliteError::DbTableError(DbTableError::DbDoesNotExist)),
         };
 
         let header_key = bincode::serialize("__HEADER")?;
@@ -210,11 +164,11 @@ where
         Ok(changed_keys)
     }
 
-    pub fn save_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
+    pub fn save_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), UnqliteError> {
         let db = UnQLite::create(filename);
 
         match db.first() {
-            Some(_) => return Err(LoadError::DbTableError(DbTableError::DbExists)),
+            Some(_) => return Err(UnqliteError::DbTableError(DbTableError::DbExists)),
             None => (),
         };
 
@@ -235,10 +189,10 @@ where
         Ok(())
     }
 
-    pub fn save_unqlite_override<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
+    pub fn save_unqlite_override<P: AsRef<str>>(&self, filename: P) -> Result<(), UnqliteError> {
         match self.save_unqlite(&filename) {
             Ok(x) => return Ok(x),
-            Err(LoadError::DbTableError(DbTableError::DbExists)) => {
+            Err(UnqliteError::DbTableError(DbTableError::DbExists)) => {
                 self.delete_unqlite(&filename)?;
                 self.save_unqlite(&filename)?;
             }
@@ -248,7 +202,7 @@ where
     }
 
     /// removes cursors in unqlite database, but does not delete the data
-    pub fn delete_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), LoadError> {
+    pub fn delete_unqlite<P: AsRef<str>>(&self, filename: P) -> Result<(), UnqliteError> {
         let db = UnQLite::create(filename);
         match db.first() {
             None => return Ok(()),
@@ -263,28 +217,5 @@ where
         }
         db.commit().unwrap();
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod dbobject {
-    use crate::unqlite_structs::DbObject;
-
-    #[test]
-    fn vec() {
-        let d = DbObject::new(vec![1, 2, 3, 4]);
-        assert_ne!(d.hash, 0);
-    }
-
-    #[test]
-    fn string() {
-        let d = DbObject::new(String::from("testing"));
-        assert_ne!(d.hash, 0);
-    }
-
-    #[test]
-    fn int() {
-        let d = DbObject::new(15);
-        assert_ne!(d.hash, 0);
     }
 }

@@ -8,7 +8,9 @@ edition = "2018"
 [features]
 serialize = ["serde", "serde_test"]
 num  = ["num-traits"]
-unqlite_db = ["unqlite", "bincode", "serde", "seahash"]
+unqlite_db = ["unqlite", "_db_base"]
+postgresql_db = ["postgres", "_db_base"]
+_db_base = ["bincode", "serde", "seahash"]
 
 [dependencies]
 
@@ -17,6 +19,9 @@ version = "*"
 optional = true
 [dependencies.csv]
 version = "*"
+optional = true
+[dependencies.postgres]
+version = "0.15"
 optional = true
 [dependencies.ndarray]
 version = "*"
@@ -58,3 +63,7 @@ required-features = ["chrono"]
 [[example]]
 name = "unqlite_example"
 required-features = ["unqlite_db"]
+
+[[example]]
+name = "postgresql_example"
+required-features = ["postgresql_db"]
