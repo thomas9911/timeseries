@@ -1,7 +1,6 @@
 #![cfg(feature = "unqlite_db")]
 
 use crate::{BtreeMapTrait, DbObject, DbTableError, Table, TableMetaTrait};
-use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use unqlite::{Cursor, Transaction, UnQLite, KV};
 
