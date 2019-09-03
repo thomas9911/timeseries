@@ -11,6 +11,7 @@ num  = ["num-traits"]
 unqlite_db = ["unqlite", "_db_base"]
 postgresql_db = ["postgres", "_db_base"]
 sqlite_db = ["rusqlite", "_db_base"]
+redis_db = ["redis", "_db_base"]
 _db_base = ["bincode", "serde", "seahash"]
 
 [dependencies]
@@ -47,6 +48,9 @@ optional = true
 version = "*"
 optional = true
 features = ["bundled"]
+[dependencies.redis]
+version = "*"
+optional = true
 [dependencies.bincode]
 version = "*"
 optional = true
@@ -73,7 +77,10 @@ required-features = ["unqlite_db"]
 name = "postgresql_example"
 required-features = ["postgresql_db"]
 
-
 [[example]]
 name = "sqlite_example"
 required-features = ["sqlite_db"]
+
+[[example]]
+name = "redis_example"
+required-features = ["redis_db"]

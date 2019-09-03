@@ -34,6 +34,9 @@ pub extern crate unqlite;
 #[cfg(feature = "sqlite_db")]
 pub extern crate rusqlite;
 
+#[cfg(feature = "redis_db")]
+pub extern crate redis;
+
 // use chrono::DateTime;
 
 // pub fn dt(datetime: &str) -> chrono::ParseResult<chrono::DateTime<chrono::FixedOffset>> {
@@ -55,6 +58,8 @@ mod db_structs;
 pub mod enums;
 #[cfg(feature = "postgresql_db")]
 mod postgresql_structs;
+#[cfg(feature = "redis_db")]
+mod redis_structs;
 #[cfg(feature = "sqlite_db")]
 mod sqlite_structs;
 #[cfg(test)]
@@ -73,6 +78,8 @@ pub use errors::*;
 pub use ndarray_structs::*;
 #[cfg(feature = "postgresql_db")]
 pub use postgresql_structs::*;
+#[cfg(feature = "redis_db")]
+pub use redis_structs::*;
 #[cfg(feature = "sqlite_db")]
 pub use sqlite_structs::*;
 pub use structs::*;

@@ -1,5 +1,5 @@
 use timeseries;
-use timeseries::{BtreeMapTrait, SqliteConfig, Table};
+use timeseries::{BtreeMapTrait, RedisConfig, Table};
 
 fn new_table_data() -> Table<u16, i32> {
     let headers = vec![
@@ -21,7 +21,7 @@ fn new_table_data() -> Table<u16, i32> {
 
     let mut indexes = Vec::new();
     let mut d = Vec::new();
-    for i in 1..25 {
+    for i in 1..2500 {
         indexes.push(i as u16);
         let row: Vec<i32> = vec![i * 10, i * 7 + 2, 25, i.pow(2)];
         d.push(row);
@@ -31,29 +31,24 @@ fn new_table_data() -> Table<u16, i32> {
 }
 
 fn main() {
-    let sqlite_path = "temp.db";
-    let config = SqliteConfig::new(sqlite_path);
+    let redis_address = "redis://192.168.99.100/3";
+
+    let config = RedisConfig::new(redis_address).unwrap();
     let mut table = new_table_data();
 
-    // prepares the sqlite database and creates file if needed
-    table.init_sqlite(&config).unwrap();
-
     // saves the whole table to the database
-    table.save_sqlite(&config).unwrap();
+    table.save_redis(&config).unwrap();
 
     table.insert(3000, vec![30000, 123456, 25, 900000]);
 
     // only update the keys that are different
-    table.update_sqlite(&config).unwrap();
+    table.update_redis(&config).unwrap();
 
-    // get the table back from the sqlite database
-    let t1: Table<u16, i32> = Table::from_sqlite(&config).unwrap();
+    // get the table back from the redis database
+    let t1: Table<u16, i32> = Table::from_redis(&config).unwrap();
 
-    // removes all the tables from the database. The inverse of init.
-    table.uninit_sqlite(&config).unwrap();
-
-    // removes the database file
-    table.remove_sqlite(&config).unwrap();
+    // deletes the table from redis
+    table.delete_redis(&config).unwrap();
 
     if table != t1 {
         println!("tables are not the same");
