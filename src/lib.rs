@@ -31,6 +31,9 @@ extern crate serde_test;
 #[cfg(feature = "unqlite_db")]
 pub extern crate unqlite;
 
+#[cfg(feature = "sqlite_db")]
+pub extern crate rusqlite;
+
 // use chrono::DateTime;
 
 // pub fn dt(datetime: &str) -> chrono::ParseResult<chrono::DateTime<chrono::FixedOffset>> {
@@ -52,6 +55,8 @@ mod db_structs;
 pub mod enums;
 #[cfg(feature = "postgresql_db")]
 mod postgresql_structs;
+#[cfg(feature = "sqlite_db")]
+mod sqlite_structs;
 #[cfg(test)]
 mod tests;
 mod traits;
@@ -68,6 +73,8 @@ pub use errors::*;
 pub use ndarray_structs::*;
 #[cfg(feature = "postgresql_db")]
 pub use postgresql_structs::*;
+#[cfg(feature = "sqlite_db")]
+pub use sqlite_structs::*;
 pub use structs::*;
 pub use traits::*;
 pub use utils::*;

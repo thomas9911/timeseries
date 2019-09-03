@@ -10,6 +10,7 @@ serialize = ["serde", "serde_test"]
 num  = ["num-traits"]
 unqlite_db = ["unqlite", "_db_base"]
 postgresql_db = ["postgres", "_db_base"]
+sqlite_db = ["rusqlite", "_db_base"]
 _db_base = ["bincode", "serde", "seahash"]
 
 [dependencies]
@@ -42,6 +43,10 @@ optional = true
 [dependencies.unqlite]
 version = "*"
 optional = true
+[dependencies.rusqlite]
+version = "*"
+optional = true
+features = ["bundled"]
 [dependencies.bincode]
 version = "*"
 optional = true
@@ -67,3 +72,8 @@ required-features = ["unqlite_db"]
 [[example]]
 name = "postgresql_example"
 required-features = ["postgresql_db"]
+
+
+[[example]]
+name = "sqlite_example"
+required-features = ["sqlite_db"]
