@@ -17,22 +17,22 @@ _db_base = ["bincode", "serde", "seahash"]
 [dependencies]
 
 [dependencies.chrono]
-version = "*"
+version = "0.4"
 optional = true
 [dependencies.csv]
-version = "*"
+version = "1.1"
 optional = true
 [dependencies.postgres]
-version = "0.15"
+version = "0.19"
 optional = true
 [dependencies.ndarray]
-version = "*"
+version = "0.15"
 optional = true
 [dependencies.num-traits]
-version = "*"
+version = "0.2"
 optional = true
 [dependencies.rayon]
-version = "*"
+version = "1.5"
 optional = true
 [dependencies.serde]
 version = "^1"
@@ -42,20 +42,20 @@ optional = true
 version = "^1"
 optional = true
 [dependencies.unqlite]
-version = "*"
+version = "1.5"
 optional = true
 [dependencies.rusqlite]
-version = "*"
+version = "0.27"
 optional = true
 features = ["bundled"]
 [dependencies.redis]
-version = "*"
+version = "0.21"
 optional = true
 [dependencies.bincode]
-version = "*"
+version = "1.3"
 optional = true
 [dependencies.seahash]
-version = "*"
+version = "4.1"
 optional = true
 
 [dev-dependencies]
